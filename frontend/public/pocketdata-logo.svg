@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" width="720" height="280" role="img" aria-labelledby="title desc">
+  <title id="title">PocketData</title>
+  <desc id="desc">PocketData — simple test data</desc>
+  <g transform="translate(6 38) scale(2.6)">
+    <path d="M40 5 70 22.5v35L40 75 10 57.5v-35Z" fill="#111626" stroke="#ffc107" stroke-width="4"/>
+    <g fill="none" stroke-width="4">
+      <ellipse cx="40" cy="27" rx="16" ry="6" stroke="#ffc107"/>
+      <path d="M24 27v23c0 8 32 8 32 0V27M24 38c0 8 32 8 32 0" stroke="#36dfff"/>
+      <path d="M24 49c0 8 32 8 32 0" stroke="#b49aff"/>
+    </g>
+  </g>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text id="wordmark" x="260" y="148" fill="#f7f8ff" font-size="76" font-weight="800" textLength="420" lengthAdjust="spacing">Pocket<tspan fill="#ffc107">Data</tspan></text>
+    <text id="tagline" x="260" y="182" fill="#999999" font-size="26" font-weight="500" textLength="420" lengthAdjust="spacing">simple test data</text>
+  </g>
+</svg>

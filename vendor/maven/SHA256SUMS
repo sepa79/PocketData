@@ -1,0 +1,17 @@
+1dc4375a40cdfc2547cb4531046346a4e95f0e94e74395e854a9e6fd13c0bca5  io/pockethive/auth-client/0.15.36/auth-client-0.15.36.jar
+a5a8ee727915c930fef66fc7907b0ff16b78c166c93194919b37b039ecd05216  io/pockethive/auth-client/0.15.36/auth-client-0.15.36.pom
+a0922f97e8dffa575490b4222d99a6dd5eb4c19a352a5a2c61824f119539a583  io/pockethive/auth-contracts/0.15.36/auth-contracts-0.15.36.jar
+ef098c43ebfd6c669f3f9ba7da33b761e8b81a9ea444bb96641708846199f9fe  io/pockethive/auth-contracts/0.15.36/auth-contracts-0.15.36.pom
+b8fa1ca44708c39811b45aea4da921a152d7ef109359b02fdfd2fccf6ce2840c  io/pockethive/pockethive-mvp/0.15.36/pockethive-mvp-0.15.36.pom
+2600a24894165f427cd93c197f7bd1fc8e71b52f024bb7cecb532fc74912952c  io/pockethive/request-templates/0.15.36/request-templates-0.15.36.jar
+dadd6794558a455e4e8f933882f6ed7f0e64447942f9d7d36b4ed97787d25cea  io/pockethive/request-templates/0.15.36/request-templates-0.15.36.pom
+a936cb3aa6c334441a3b59240725c575d988c67ca51a39f83925a83f82770247  io/pockethive/swarm-model/0.15.36/swarm-model-0.15.36.jar
+701bbc2cdc7c2080d9b1e5740f23e93d01893884170afe30938e8d9f81e98719  io/pockethive/swarm-model/0.15.36/swarm-model-0.15.36.pom
+0e1f73cbee7c8b493c1f6b394c5d9a1473cc705d95c711f305c04a387f3ef854  io/pockethive/template-data/0.15.36/template-data-0.15.36.jar
+53309d9cdc55e9cdda2099dfdb2b31a616af9036cc5545403aad50853e074844  io/pockethive/template-data/0.15.36/template-data-0.15.36.pom
+3c4aef7341ad54016ae86a10578779aacfb131a7006a5e261138f246403de690  io/pockethive/templating-api/0.15.36/templating-api-0.15.36.jar
+5ba9c5ec1d5763d5e984784c033dbb65483236265701d8825ab84a9e9f1ec487  io/pockethive/templating-api/0.15.36/templating-api-0.15.36.pom
+be13c5a04ae1c7cee6d8c6907db4f5a90716965aef89677df4b1f16ce9412e64  io/pockethive/templating/0.15.36/templating-0.15.36.jar
+56cc2c6eb286c3e0f873d0df6562cd59c0fb3fc88571f3dc7a461ccc7323079b  io/pockethive/templating/0.15.36/templating-0.15.36.pom
+d8fddcf61804ed2a20e6f714769dc2d5282c125deaf8f039b6f37a7e0fe8ad10  io/pockethive/work-config/0.15.36/work-config-0.15.36.jar
+0671b01dbf0f000434887c30e5f11c604ff98bb6c433bc84cdede2454fe571db  io/pockethive/work-config/0.15.36/work-config-0.15.36.pom

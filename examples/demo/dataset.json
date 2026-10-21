@@ -1,0 +1,12 @@
+{
+  "sutId": "pocketdata-demo",
+  "name": "cards",
+  "description": "Persistent synthetic demo inventory. The ready list contains fake account/card identifiers, not usable payment cards.",
+  "fields": [
+    {"name": "customer", "type": "string", "required": false},
+    {"name": "accountNumber", "type": "string", "required": true},
+    {"name": "cardNumber", "type": "string", "required": false},
+    {"name": "cardNumber12", "type": "string", "required": false}
+  ],
+  "lists": ["ready", "returned"]
+}

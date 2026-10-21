@@ -1,0 +1,13 @@
+services:
+  pocketdata:
+    environment:
+      POCKETHIVE_AUTH_BASE_URL: "${POCKETHIVE_AUTH_BASE_URL:?Set the official PH ingress URL reachable on its Docker network}"
+    networks: [pockethive, pockethive_redis]
+
+networks:
+  pockethive:
+    external: true
+    name: "${POCKETHIVE_NETWORK_NAME:?Set the existing PH Docker network name}"
+  pockethive_redis:
+    external: true
+    name: "${POCKETHIVE_REDIS_NETWORK_NAME:?Set the existing Docker network of the selected PH Redis}"

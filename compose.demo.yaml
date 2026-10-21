@@ -1,0 +1,27 @@
+services:
+  pocketdata:
+    networks:
+      demo: {}
+  pocketdata-demo:
+    image: holomekc/wiremock-gui@sha256:30c03ac9dc30b2a8a3bfaf25876e66ca6c2764a39ca26b5343a55942abb201da
+    command: ["--disable-banner", "--global-response-templating", "--max-request-journal-entries=100"]
+    user: "10001:10001"
+    ports: ["127.0.0.1:8787:8080"]
+    volumes:
+      - ./examples/demo/wiremock:/home/wiremock:ro
+    networks: [demo]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "3", "http://127.0.0.1:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+networks:
+  demo:
+    internal: true

@@ -1,0 +1,28 @@
+services:
+  pocketdata:
+    build: .
+    image: pocketdata-local:dev
+    ports:
+      - "127.0.0.1:8785:8785"
+    environment:
+      POCKETDATA_REDIS_URL: "${POCKETDATA_REDIS_URL:?Set the explicit Redis URL used by the selected PH environment}"
+      POCKETHIVE_AUTH_BASE_URL: "${POCKETHIVE_AUTH_BASE_URL:-}"
+    volumes:
+      - pocketdata_inventory:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "3", "http://127.0.0.1:8785/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  pocketdata_inventory:

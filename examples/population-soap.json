@@ -1,0 +1,39 @@
+{
+  "name": "Synthetic SOAP card creation — adapt before running",
+  "count": 1,
+  "values": {
+    "customerId": "000example",
+    "accountNumber": "000example-account"
+  },
+  "params": {},
+  "steps": [
+    {
+      "name": "create-card",
+      "endpoint": "cards",
+      "call": {
+        "profile": "portable-v1",
+        "requires": ["xml_path", "xml_text", "soap11"],
+        "request": {
+          "serviceId": "synthetic-cards",
+          "callId": "create-card",
+          "protocol": "HTTP",
+          "method": "POST",
+          "pathTemplate": "{{ endpoint.path }}",
+          "headersTemplate": {},
+          "bodyTemplate": "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:c=\"urn:example:cards\"><soap:Body><c:CreateCard><c:customerId>{{ xml_text(record.customerId) }}</c:customerId><c:accountNumber>{{ xml_text(record.accountNumber) }}</c:accountNumber></c:CreateCard></soap:Body></soap:Envelope>"
+        },
+        "response": {
+          "kind": "SOAP11",
+          "soapAction": "urn:example:cards/CreateCard",
+          "expectedStatus": 200,
+          "extract": {
+            "cardNumber": "/soap:Envelope/soap:Body/c:CreateCardResponse/c:cardNumber"
+          },
+          "namespaces": {
+            "c": "urn:example:cards"
+          }
+        }
+      }
+    }
+  ]
+}

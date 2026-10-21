@@ -1,0 +1,10 @@
+{
+  "id": "pocketdata-demo",
+  "name": "Demo · JSON + SOAP",
+  "description": "Local synthetic account/card demo only. JSON creates an account, then SOAP 1.1 and SOAP 1.2 create fake card identifiers. No bank or payment system is contacted.",
+  "endpoints": {
+    "api": "http://pocketdata-demo:8080",
+    "cards": "http://pocketdata-demo:8080/cards11",
+    "cards12": "http://pocketdata-demo:8080/cards12"
+  }
+}

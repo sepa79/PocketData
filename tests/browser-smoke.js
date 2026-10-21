@@ -1,0 +1,66 @@
+async page => {
+  const context = await page.context().browser().newContext({viewport: {width: 1366, height: 768}});
+  const app = await context.newPage();
+  const errors = [];
+  app.on("pageerror", error => errors.push(error.message));
+  const ensure = (condition, message) => { if (!condition) throw new Error(message); };
+  try {
+    await app.goto("http://localhost:8786/#suts");
+    await app.locator("#auth-button").filter({hasText: "View only · Sign in"}).waitFor();
+    ensure(!await app.getByRole("button", {name: "＋ SUT", exact: true}).isVisible(), "Anonymous editor exposed");
+    const catalogue = await (await app.request.get("http://localhost:8786/api/catalog")).json();
+    ensure(catalogue.revision === 0 && catalogue.suts.length === 0, "Use an empty isolated catalogue");
+    await app.evaluate(() => sessionStorage.setItem("POCKETDATA_AUTH_SESSION", JSON.stringify({accessToken: "phweb_pocketdata_browser_fixture", expiresAt: Date.now() + 3600000})));
+    await app.reload();
+    await app.locator("#auth-button").filter({hasText: "local-admin · Sign out"}).waitFor();
+    await app.getByRole("button", {name: "Expand view sidebar", exact: true}).click();
+    await app.getByRole("button", {name: "Collapse view sidebar", exact: true}).waitFor();
+    await app.getByRole("button", {name: "＋ SUT", exact: true}).click();
+    await app.getByRole("dialog").waitFor();
+    await app.keyboard.press("Escape");
+    await app.getByRole("dialog").waitFor({state: "hidden"});
+    await app.getByRole("button", {name: "＋ SUT", exact: true}).click();
+    await app.mouse.click(2, 2);
+    await app.getByRole("dialog").waitFor({state: "hidden"});
+    await app.getByRole("button", {name: "＋ SUT", exact: true}).click();
+    await app.getByLabel("ID", {exact: true}).fill("qa-ui");
+    await app.getByLabel("Name", {exact: true}).fill("Synthetic UI environment");
+    await app.getByLabel("Description", {exact: true}).fill("Isolated browser fixture");
+    await app.getByLabel(/^Endpoints · JSON object/).fill('{"http":"https://example.invalid"}');
+    await app.getByRole("button", {name: "Save", exact: true}).click();
+    await app.getByRole("dialog").waitFor({state: "hidden"});
+    await app.getByRole("heading", {name: "Synthetic UI environment", exact: true}).waitFor();
+    await app.getByRole("button", {name: "Open DataSets →", exact: true}).click();
+    await app.getByRole("button", {name: "＋ DataSet", exact: true}).click();
+    await app.getByLabel("Name / Redis namespace", {exact: true}).fill("qa-cards");
+    await app.getByLabel("Data lists · comma separated", {exact: true}).fill("ready");
+    await app.getByLabel(/^Record fields · JSON array/).fill('[{"name":"accountNumber","type":"string","required":true}]');
+    await app.getByRole("button", {name: "Save", exact: true}).click();
+    await app.getByRole("dialog").waitFor({state: "hidden"});
+    await app.getByRole("button", {name: "CSV inventory →", exact: true}).click();
+    await app.getByLabel("CSV file · UTF-8 · up to 25 MiB", {exact: true}).setInputFiles({name: "synthetic.csv", mimeType: "text/csv", buffer: Buffer.from("accountNumber,extra\n000123,preserved\n")});
+    await app.getByRole("button", {name: "Import to Redis", exact: true}).click();
+    await app.getByText(/Published 1 records/).first().waitFor();
+    await app.getByRole("button", {name: "Download", exact: true}).waitFor();
+    const downloadReady = app.waitForEvent("download");
+    await app.getByRole("button", {name: "Download", exact: true}).click();
+    const download = await downloadReady;
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    ensure(Buffer.concat(chunks).toString("utf8").includes("000123,preserved"), "CSV download lost identifiers or extra columns");
+    const counts = await (await app.request.get("http://localhost:8786/api/suts/qa-ui/datasets")).json();
+    ensure(counts[0].counts.ready === 1, "CSV was not published to isolated Redis");
+    await app.reload();
+    await app.getByRole("combobox", {name: "Selected SUT", exact: true}).selectOption("qa-ui");
+    await app.getByRole("button", {name: "Download", exact: true}).waitFor();
+    await app.setViewportSize({width: 390, height: 844});
+    const layout = await app.evaluate(() => ({width: innerWidth, document: document.documentElement.scrollWidth, headers: document.querySelectorAll("header").length, mains: document.querySelectorAll("main").length}));
+    ensure(layout.document <= layout.width && layout.headers === 1 && layout.mains === 1, "Shared shell overflow/duplication");
+    ensure(errors.length === 0, "Browser errors: " + errors.join("; "));
+    return {passed: true, isolated: true, catalogue: true, dataset: true, csvInventoryBeforeRedis: true, reload: true, modalEscapeBackdrop: true, layout};
+  } catch (failure) {
+    console.error({body: await app.locator("body").innerText(), errors});
+    await app.screenshot({path: "/tmp/pocketdata-react-smoke-failed.png"});
+    throw failure;
+  } finally { await context.close(); }
+}

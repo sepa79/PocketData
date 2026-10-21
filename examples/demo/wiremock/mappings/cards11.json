@@ -1,0 +1,18 @@
+{
+  "name": "Synthetic SOAP 1.1 card creation",
+  "request": {
+    "method": "POST",
+    "urlPath": "/cards11",
+    "headers": {
+      "Content-Type": {"contains": "text/xml"},
+      "SOAPAction": {"equalTo": "\"urn:example:cards/CreateCard\""}
+    },
+    "bodyPatterns": [{"matchesXPath": "//*[local-name()='accountNumber']"}]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "text/xml; charset=utf-8"},
+    "body": "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><c:CreateCardResponse xmlns:c=\"urn:example:cards\"><c:cardNumber>000-demo-card11-{{randomValue type='UUID'}}</c:cardNumber></c:CreateCardResponse></s:Body></s:Envelope>",
+    "transformers": ["response-template"]
+  }
+}

@@ -1,0 +1,18 @@
+name: pp-ph-integration
+services:
+  auth-service:
+    environment:
+      POCKETHIVE_AUTH_WEB_PD_REDIRECT_URI: ""
+      POCKETHIVE_AUTH_WEB_PH_REDIRECT_URI: ""
+      POCKETHIVE_AUTH_WEB_PP_REDIRECT_URI: ""
+      POCKETHIVE_AUTH_OAUTH_ISSUER: http://localhost:8088/auth-service
+      POCKETHIVE_AUTH_SSO_COOKIE_NAME: PH_AUTH_INTEGRATION_QA
+    ports: !override []
+  ui:
+    ports: !override ["127.0.0.1:8088:8088"]
+    depends_on: !override
+      auth-service:
+        condition: service_healthy
+networks:
+  default:
+    name: pp-ph-integration

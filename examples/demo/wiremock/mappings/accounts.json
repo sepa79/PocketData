@@ -1,0 +1,14 @@
+{
+  "name": "Synthetic JSON account creation",
+  "request": {
+    "method": "POST",
+    "urlPath": "/accounts",
+    "bodyPatterns": [{"matchesJsonPath": "$.customer"}, {"matchesJsonPath": "$.sequence"}]
+  },
+  "response": {
+    "status": 201,
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"accountNumber\":\"000-demo-account-{{randomValue type='UUID'}}\"}",
+    "transformers": ["response-template"]
+  }
+}

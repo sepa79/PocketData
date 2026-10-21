@@ -1,0 +1,80 @@
+{
+  "name": "Synthetic account + SOAP cards — local demo or adapt to your SUT",
+  "count": 1,
+  "values": { "customer": "000001" },
+  "params": {},
+  "steps": [
+    {
+      "name": "Create account",
+      "endpoint": "api",
+      "call": {
+        "profile": "portable-v1",
+        "requires": ["json_path", "json_string"],
+        "request": {
+          "serviceId": "accounts",
+          "callId": "create",
+          "protocol": "HTTP",
+          "method": "POST",
+          "pathTemplate": "/accounts",
+          "headersTemplate": { "Content-Type": "application/json" },
+          "bodyTemplate": "{\"customer\":{{ json_string(record.customer) }},\"sequence\":{{ params.iteration }}}"
+        },
+        "response": {
+          "kind": "JSON",
+          "soapAction": "",
+          "expectedStatus": 201,
+          "extract": { "accountNumber": "/accountNumber" },
+          "namespaces": {}
+        }
+      }
+    },
+    {
+      "name": "Create card · SOAP 1.1",
+      "endpoint": "cards",
+      "call": {
+        "profile": "portable-v1",
+        "requires": ["xml_path", "xml_text", "soap11"],
+        "request": {
+          "serviceId": "cards",
+          "callId": "create-soap11",
+          "protocol": "HTTP",
+          "method": "POST",
+          "pathTemplate": "{{ endpoint.path }}",
+          "headersTemplate": {},
+          "bodyTemplate": "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><c:CreateCard xmlns:c=\"urn:example:cards\"><c:accountNumber>{{ xml_text(record.accountNumber) }}</c:accountNumber></c:CreateCard></s:Body></s:Envelope>"
+        },
+        "response": {
+          "kind": "SOAP11",
+          "soapAction": "urn:example:cards/CreateCard",
+          "expectedStatus": 200,
+          "extract": {"cardNumber": "/soap:Envelope/soap:Body/c:CreateCardResponse/c:cardNumber"},
+          "namespaces": {"c": "urn:example:cards"}
+        }
+      }
+    },
+    {
+      "name": "Create card · SOAP 1.2",
+      "endpoint": "cards12",
+      "call": {
+        "profile": "portable-v1",
+        "requires": ["xml_path", "xml_text", "soap12"],
+        "request": {
+          "serviceId": "cards",
+          "callId": "create-soap12",
+          "protocol": "HTTP",
+          "method": "POST",
+          "pathTemplate": "{{ endpoint.path }}",
+          "headersTemplate": {},
+          "bodyTemplate": "<s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body><c:CreateCard xmlns:c=\"urn:example:cards\"><c:accountNumber>{{ xml_text(record.accountNumber) }}</c:accountNumber></c:CreateCard></s:Body></s:Envelope>"
+        },
+        "response": {
+          "kind": "SOAP12",
+          "soapAction": "urn:example:cards/CreateCard",
+          "expectedStatus": 200,
+          "extract": {"cardNumber12": "/soap:Envelope/soap:Body/c:CreateCardResponse/c:cardNumber"},
+          "namespaces": {"c": "urn:example:cards"}
+        }
+      }
+    }
+  ]
+}

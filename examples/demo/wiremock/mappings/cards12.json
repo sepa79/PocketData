@@ -1,0 +1,15 @@
+{
+  "name": "Synthetic SOAP 1.2 card creation",
+  "request": {
+    "method": "POST",
+    "urlPath": "/cards12",
+    "headers": {"Content-Type": {"contains": "application/soap+xml"}},
+    "bodyPatterns": [{"matchesXPath": "//*[local-name()='accountNumber']"}]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/soap+xml; charset=utf-8"},
+    "body": "<s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Body><c:CreateCardResponse xmlns:c=\"urn:example:cards\"><c:cardNumber>000-demo-card12-{{randomValue type='UUID'}}</c:cardNumber></c:CreateCardResponse></s:Body></s:Envelope>",
+    "transformers": ["response-template"]
+  }
+}
