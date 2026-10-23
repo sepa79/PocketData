@@ -4,8 +4,9 @@
   <name>PocketData</name>
   <url>https://github.com/sepa79/PocketData</url>
   <licenses><license><name>GNU General Public License v3.0 or later</name><url>https://www.gnu.org/licenses/gpl-3.0.html</url><distribution>repo</distribution></license></licenses>
-  <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><spring.boot.version>3.5.16</spring.boot.version><tomcat.version>10.1.60</tomcat.version><jackson.version>2.21.7</jackson.version><httpclient5.version>5.6.3</httpclient5.version><httpcore5.version>5.4.3</httpcore5.version><netty.version>4.1.137.Final</netty.version><log4j.version>2.25.5</log4j.version><frontend.skip>false</frontend.skip></properties>
+  <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><spring.boot.version>3.5.16</spring.boot.version><tomcat.version>10.1.60</tomcat.version><jackson.version>2.21.7</jackson.version><httpclient5.version>5.6.3</httpclient5.version><httpcore5.version>5.4.3</httpcore5.version><netty.version>4.1.137.Final</netty.version><log4j.version>2.25.5</log4j.version><pockethive.auth.version>0.15.38-e98de7ac-authhttp-fd82f5c6cc75</pockethive.auth.version><frontend.skip>false</frontend.skip></properties>
   <dependencyManagement><dependencies>
+    <dependency><groupId>io.pockethive</groupId><artifactId>auth-contracts</artifactId><version>${pockethive.auth.version}</version></dependency>
     <dependency><groupId>com.fasterxml.jackson</groupId><artifactId>jackson-bom</artifactId><version>${jackson.version}</version><type>pom</type><scope>import</scope></dependency>
     <dependency><groupId>io.netty</groupId><artifactId>netty-bom</artifactId><version>${netty.version}</version><type>pom</type><scope>import</scope></dependency>
     <dependency><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-bom</artifactId><version>${log4j.version}</version><type>pom</type><scope>import</scope></dependency>
@@ -19,7 +20,9 @@
   </dependencies></dependencyManagement>
   <repositories><repository><id>pocket-local-auth</id><url>file://${project.basedir}/vendor/maven</url><releases><checksumPolicy>fail</checksumPolicy></releases></repository></repositories>
   <dependencies>
-    <dependency><groupId>io.pockethive</groupId><artifactId>auth-client</artifactId><version>0.15.36</version></dependency>
+    <dependency><groupId>io.modelcontextprotocol.sdk</groupId><artifactId>mcp-core</artifactId><version>2.0.0</version></dependency>
+    <dependency><groupId>io.modelcontextprotocol.sdk</groupId><artifactId>mcp-json-jackson2</artifactId><version>2.0.0</version></dependency>
+    <dependency><groupId>io.pockethive</groupId><artifactId>auth-client</artifactId><version>${pockethive.auth.version}</version></dependency>
     <dependency><groupId>io.pockethive</groupId><artifactId>template-data</artifactId><version>0.15.36</version></dependency>
     <dependency><groupId>io.pockethive</groupId><artifactId>templating</artifactId><version>0.15.36</version></dependency>
     <dependency><groupId>io.pockethive</groupId><artifactId>request-templates</artifactId><version>0.15.36</version></dependency>
@@ -31,6 +34,7 @@
   </dependencies>
   <build><finalName>pocketdata</finalName><resources>
     <resource><directory>src/main/resources</directory></resource>
+    <resource><directory>examples</directory><targetPath>examples</targetPath><includes><include>population-soap.json</include></includes></resource>
     <resource><directory>frontend/dist</directory><targetPath>static</targetPath></resource>
     <resource><directory>.</directory><includes><include>VERSION</include></includes></resource>
   </resources><plugins>

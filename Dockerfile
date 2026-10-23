@@ -14,6 +14,7 @@ COPY vendor/maven ./vendor/maven
 RUN cd vendor/maven && sha256sum -c SHA256SUMS && cd /build && mvn -B -ntp dependency:go-offline
 COPY VERSION ./
 COPY src ./src
+COPY examples/population-soap.json ./examples/population-soap.json
 COPY compose.yaml compose.ph.yaml .env.example ./
 COPY --from=frontend /frontend/dist ./frontend/dist
 RUN mvn -B -ntp -Dfrontend.skip=true verify
@@ -23,6 +24,10 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 pocketdata && useradd --uid 10001 --gid 10001 --no-create-home pocketdata && mkdir /data && chown 10001:10001 /data
 WORKDIR /app
+LABEL org.opencontainers.image.title=PocketData \
+      org.opencontainers.image.source=https://github.com/sepa79/PocketData \
+      org.opencontainers.image.licenses=GPL-3.0-or-later
+COPY LICENSE /app/LICENSE
 COPY --from=build /build/target/pocketdata.jar /app/pocketdata.jar
 ENV POCKETDATA_DATA_DIR=/data PORT=8785
 USER 10001:10001

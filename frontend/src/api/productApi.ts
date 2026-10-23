@@ -29,6 +29,7 @@ export function createProductApi(fetchWithAuth: AuthenticatedFetch) {
     datasets: (sut: string, signal?: AbortSignal) => json<DatasetSummary[]>(namespace(sut), { signal }),
     saveCatalog: (catalog: CatalogSnapshot) => json<CatalogSnapshot>('/api/catalog', write('PUT', catalog)),
     createDataset: (format: DatasetDefinition) => json<DatasetDefinition>(namespace(format.sutId), write('POST', format)),
+    updateDataset: (expected: DatasetDefinition, definition: DatasetDefinition) => json<DatasetDefinition>(datasetPath(expected.sutId, expected.name), write('PUT', { expected, definition })),
     inventory: (sut: string, dataset: string, signal?: AbortSignal) => json<InventoryFile[]>(`${datasetPath(sut, dataset)}/inventory`, { signal }),
     importCsv: (sut: string, dataset: string, list: string, file: File) => json<ImportResult>(`${datasetPath(sut, dataset)}/import?list=${encodeURIComponent(list)}`, { method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: file }),
     download: async (sut: string, dataset: string, id: string) => {

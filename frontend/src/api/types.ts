@@ -13,6 +13,7 @@ export interface CatalogSnapshot {
 export interface ConnectionConfiguration {
   redisConfigured: boolean
   authConfigured: boolean
+  redisCommanderUrl: string
 }
 
 export interface RecordField {

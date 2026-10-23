@@ -47,4 +47,13 @@ public class RecordFormat {
         }
         return result;
     }
+    public void validateUpdate(DatasetDefinition expected, DatasetDefinition definition) {
+        validate(expected);
+        validate(definition);
+        if (!expected.sutId().equals(definition.sutId()) || !expected.name().equals(definition.name())) throw new ApiFailure(400, "A DataSet's SUT and name cannot change.");
+        if (!definition.lists().containsAll(expected.lists()) || !definition.fields().containsAll(expected.fields())) throw new ApiFailure(400, "Existing lists and field definitions cannot be removed or changed while they may be in use.");
+        for (RecordField field : definition.fields()) {
+            if (!expected.fields().contains(field) && field.required()) throw new ApiFailure(400, "New fields must be optional so existing records remain usable.");
+        }
+    }
 }

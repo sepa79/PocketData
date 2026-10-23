@@ -1,5 +1,9 @@
 # Scripted population
 
+Agents can prepare shared drafts and explicitly run/monitor/stop jobs through
+[MCP](MCP.md). **Load saved script** fills the operator editor; Run and its
+confirmation remain separate actions. The same preflight and runner serve both.
+
 PocketData runs finite sequences of PH HTTP templates in its own process. JSON
 and SOAP 1.1/1.2 responses can supply fields to later steps. This is a small
 resource-creation helper, not another swarm engine, arbitrary Groovy/JavaScript,
@@ -7,9 +11,22 @@ WSDL generator or replacement for PH Providers.
 
 ## Run and inspect
 
-Select a SUT, one of its DataSets and an existing target list. Open **Population**,
-load/edit JSON and explicitly confirm Run. Active PH local-admin is required for
+Select **Selected SUT**, open a DataSet row and choose **Populate with a script**
+(or use the Population navigation item). Choose an existing target list; the
+full Redis key is displayed below the editable list selector and in confirmation.
+
+Set iterations and pacing in the operator controls. JSON editing is available
+under Advanced / Script; it is the same recipe, not an independent set of settings.
+Loading a recipe changes the controls but does not start it. Explicitly confirm
+Run. Active PH local-admin is required for
 start, status, stop and raw response downloads. PH tokens never reach the SUT.
+
+The UI links to the shared PH portable-template contract and Scenario variables
+documentation. PD Population binds explicit recipe `params`, seeded `record`
+values and the selected endpoint through the shared library. PH's typed
+profile/SUT `variables.yaml` and `vars` resolution belong to Scenario creation;
+PD does not import that file or implicitly merge it into params. Supporting such
+profiles later requires the shared PH resolver, not a second PD implementation.
 
 One job runs per process, with 1–1000 iterations and 1–20 named steps. Each
 iteration starts with a fresh copy of `values`; extracted fields are added to the
@@ -30,13 +47,51 @@ selected PH source. Pinned template-data, request-templates and templating
 artifacts own decoding, JSON Pointer/XPath, SOAP, admission and rendering. PD
 only binds product values and maps errors; no local reader/parser is retained.
 
-A recipe has exactly `name`, `count`, `values`, `params`, `steps`. Each step has
+A recipe has exactly `name`, `count`, `pacing`, `values`, `params`, `steps`. Each step has
 `name`, a SUT `endpoint` key and `call`. That call is independently portable:
 `profile: "portable-v1"`, explicit `requires`, `request`, `response`. The request
 is the canonical PH HTTP definition. Response declares `kind` (JSON/SOAP11/SOAP12),
 `soapAction`, `expectedStatus`, `extract`, `namespaces`. The same call is a PH HTTP
 Sequence template file without PD loop, SUT name, CSV path or Redis binding.
 There is no automatic old-format conversion.
+
+## Iteration pacing
+
+Pacing belongs to the PD runner, not the shared HTTP call/template. It counts
+whole script iterations, not individual HTTP requests. There is one sequential
+executor; no threads setting, overlapping iterations or queued missed starts.
+`pacing` is required, with exactly `mode`, numeric `value` and `unit`:
+
+- `{"mode":"DELAY","value":5,"unit":"SECONDS"}`: complete the entire
+  iteration, durable CSV and acknowledged Redis publication, then wait five
+  seconds before the next iteration. Units: MILLISECONDS, SECONDS, MINUTES,
+  HOURS, DAYS. Zero is as fast as possible; nonzero delay is at least 1 ms.
+- `{"mode":"RATE","value":3,"unit":"HOURS"}`: attempt three iteration
+  starts per hour, best effort. Units: SECONDS, MINUTES, HOURS, DAYS. Value must
+  be positive. The remaining wait is the target interval minus the elapsed time
+  of the actual preceding iteration. If it took longer, the next iteration
+  starts without a wait. It establishes a new start time, not a catch-up debt.
+
+The first iteration starts immediately and there is no wait after the last one.
+Configured intervals are bounded to 365 days; rate intervals must be at least
+one nanosecond. These are numeric admission bounds, not timing accuracy promises.
+All elapsed calculations and waits use monotonic time, not wall-clock dates.
+Stop wakes a pending wait immediately, including a days-long delay. In-flight
+requests retain the existing bounded-stop and response-durability behavior.
+Waiting still occupies the one active-job slot; restarting never resumes it.
+
+Snapshots echo immutable `pacing`, `elapsedMs`, `waiting`, `waitRemainingMs` and
+`achievedPerSecond`. Achieved rate is acknowledged full iterations (`published`)
+divided by elapsed job time, including waiting. It is an average since admission,
+not an instantaneous measurement, and early samples may be high. Failed/partial
+iterations do not add to it. Elapsed time and achieved rate freeze at termination;
+the UI formats rates as /s, /min, /h or /day without changing the requested tempo.
+
+`count` remains the explicit finite limit (1–1000); `params.iteration` remains
+the runner-owned one-based counter available to each step. Timing is never
+implemented as a fake HTTP step, retry or an extra template language.
+
+## Template context
 
 Portable context has only `record`, `params` and `endpoint.path`. Record starts
 from values; params stays independent. PD owns reserved `params.iteration`, a
@@ -174,6 +229,7 @@ All routes require fresh editor authorization:
 - `GET .../population/{id}/responses`: protected response CSV.
 
 Snapshot fields: id, status, total, completed, published, iteration, step, error,
-inventoryId. Status: RUNNING, STOPPING, STOPPED, SUCCEEDED, FAILED. A second active
+inventoryId, pacing, elapsedMs, achievedPerSecond, waiting, waitRemainingMs.
+Status: RUNNING, STOPPING, STOPPED, SUCCEEDED, FAILED. A second active
 job returns 409; unknown/cross-DataSet jobs return 404. Existing body owner limits
 recipe JSON to one MiB.

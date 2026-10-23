@@ -1,6 +1,7 @@
 {
   "name": "Synthetic account + SOAP cards — local demo or adapt to your SUT",
   "count": 1,
+  "pacing": { "mode": "DELAY", "value": 0, "unit": "MILLISECONDS" },
   "values": { "customer": "000001" },
   "params": {},
   "steps": [

@@ -9,7 +9,8 @@ import soap12Mock from '../../../examples/demo/wiremock/mappings/cards12.json'
 
 describe('authored portable population examples', () => {
   it.each([[['JSON', 'SOAP11', 'SOAP12'], jsonExample], [['SOAP11'], soapExample]])('%s keeps calls standalone and separate from the PD loop/binding', (kinds, recipe) => {
-    expect(Object.keys(recipe).sort()).toEqual(['count', 'name', 'params', 'steps', 'values'])
+    expect(Object.keys(recipe).sort()).toEqual(['count', 'name', 'pacing', 'params', 'steps', 'values'])
+    expect(recipe.pacing).toEqual({ mode: 'DELAY', value: 0, unit: 'MILLISECONDS' })
     expect(recipe.params).toEqual({})
     expect(Object.values(recipe.values).every(value => typeof value === 'string')).toBe(true)
     expect(recipe.steps).toHaveLength(kinds.length)

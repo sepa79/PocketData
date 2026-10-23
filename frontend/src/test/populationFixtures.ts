@@ -3,6 +3,7 @@ import type { PopulationJob, PopulationRecipe, PopulationTarget } from '../api/p
 export const populationTarget: PopulationTarget = { sut: 'synthetic-a', dataset: 'cards', list: 'returned' }
 export const populationRecipe: PopulationRecipe = {
   name: 'Synthetic SOAP only', count: 2, values: { customer: '001', extra: 'retain' }, params: { customer: '009', iteration: '999' },
+  pacing: { mode: 'DELAY', value: 0, unit: 'MILLISECONDS' },
   steps: [{
     name: 'Create card', endpoint: 'api', call: {
       profile: 'portable-v1', requires: ['xml_path', 'xml_text', 'xml_attr', 'soap12'],
@@ -21,4 +22,5 @@ export const populationRecipe: PopulationRecipe = {
 export const populationJob: PopulationJob = {
   id: 'synthetic-job', status: 'RUNNING', total: 2, completed: 0, published: 0, iteration: 1,
   step: 'Create card', error: '', inventoryId: '',
+  pacing: populationRecipe.pacing, elapsedMs: 0, achievedPerSecond: 0, waiting: false, waitRemainingMs: 0,
 }

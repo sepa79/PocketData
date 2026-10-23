@@ -38,7 +38,8 @@ class PopulationAccessTest {
     }
     @Test void admittedStartReadAndStopProjectOnlyTheJobOwnersExactSnapshot() throws Exception {
         AuthService auth = mock(AuthService.class); PopulationJobs jobs = mock(PopulationJobs.class); CsvInventory inventory = mock(CsvInventory.class);
-        PopulationSnapshot snapshot = new PopulationSnapshot("job", PopulationStatus.RUNNING, 3, 0, 0, 1, "account", "", "job");
+        PopulationSnapshot snapshot = new PopulationSnapshot("job", PopulationStatus.RUNNING, 3, 0, 0, 1, "account", "", "job",
+            new PopulationPacing(PopulationPacingMode.DELAY, 0, PopulationTimeUnit.MILLISECONDS), 0, 0, false, 0);
         when(jobs.start(eq("qa"), eq("cards"), eq("ready"), any())).thenReturn(snapshot);
         when(jobs.read("qa", "cards", "job")).thenReturn(snapshot); when(jobs.stop("qa", "cards", "job")).thenReturn(snapshot);
         MockMvc http = MockMvcBuilders.standaloneSetup(new PopulationController(auth, jobs, inventory)).setControllerAdvice(new ApiErrors()).build();

@@ -3,6 +3,9 @@ import type { ProductApi } from '../api/productApi'
 import type { DatasetSummary } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
 import { useInventory } from '../hooks/useInventory'
+import { DatasetTarget } from '../components/DatasetTarget'
+import { FieldHelp } from '../components/FieldHelp'
+import { CsvInventoryHelp } from '../components/CsvInventoryHelp'
 
 export function InventoryView({ api, sut, datasets, selected, onSelect, canEdit, refreshing, datasetError, revision, onBusyChange, onImported, notify }: {
   api: ProductApi; sut: string; datasets: DatasetSummary[]; selected: string; onSelect: (name: string) => void; canEdit: boolean
@@ -68,15 +71,8 @@ export function InventoryView({ api, sut, datasets, selected, onSelect, canEdit,
     <div className="pd-panel-toolbar"><h1>CSV inventory</h1></div>
     {!sut ? <EmptyState title="Select a SUT first">Inventory is grouped by SUT and DataSet.</EmptyState> : datasetError ? <p role="alert" className="pd-error">DataSets unavailable: {datasetError}</p> : <>
       <div className="pd-card pd-import">
-        <div className="pd-form-grid">
-          <label>DataSet<select value={selected} onChange={event => { onSelect(event.target.value); setResult(''); setImportError('') }} disabled={busy || refreshing}>
-            {!datasets.length ? <option value="">No DataSets available</option> : null}{datasets.map(item => <option key={item.format.name} value={item.format.name}>{item.format.name}</option>)}
-          </select></label>
-          <label>Target list<select value={list} onChange={event => setRequestedList(event.target.value)} disabled={busy || refreshing || !dataset}>
-            {!dataset?.lists.length ? <option value="">No lists available</option> : null}{dataset?.lists.map(name => <option key={name} value={name}>{name}</option>)}
-          </select></label>
-        </div>
-        {canEdit ? <><label>CSV file · UTF-8 · up to 25 MiB<input ref={fileInput} type="file" accept=".csv,text/csv" onChange={event => { setFile(event.target.files?.[0] ?? null); setResult(''); setImportError('') }} disabled={busy || refreshing || !dataset} /></label>
+        <DatasetTarget sut={sut} datasets={datasets} selected={selected} list={list} locked={busy || refreshing} onSelect={name => { onSelect(name); setResult(''); setImportError(''); setFile(null); if (fileInput.current) fileInput.current.value = '' }} onList={setRequestedList} />
+        {canEdit ? <><FieldHelp label="CSV file · UTF-8 · up to 25 MiB" hint="Header row with the DataSet's required columns." details="Comma-separated UTF-8 CSV, up to 25 MiB and 200 columns. Extra columns are preserved; text IDs keep leading zeroes. Validation finishes before a durable copy is saved and records are appended to Redis.">{description => <input aria-label="CSV file · UTF-8 · up to 25 MiB" aria-describedby={description} ref={fileInput} type="file" accept=".csv,text/csv" onChange={event => { setFile(event.target.files?.[0] ?? null); setResult(''); setImportError('') }} disabled={busy || refreshing || !dataset} />}</FieldHelp>
           <button className="pd-primary" onClick={() => void importCsv()} disabled={busy || refreshing || !dataset || !list || !file}>{busy ? 'Saving and publishing…' : 'Import to Redis'}</button></> : null}
         <p className="pd-muted">Validate → save on the persistent volume → publish to Redis. Imports add records; they do not create accounts/cards in the SUT. No automatic clearing, retry or repopulation.</p>
         {busy ? <p role="status">Import in progress. Keep this view open; do not submit the same CSV twice.</p> : null}
@@ -84,7 +80,9 @@ export function InventoryView({ api, sut, datasets, selected, onSelect, canEdit,
         {importError ? <p role="alert" className="pd-error">{importError}</p> : null}
       </div>
       {!canEdit ? <EmptyState title="Raw inventory requires local-admin">Sign in through PocketHive to import and download CSV files.</EmptyState> : !dataset ? <EmptyState title="Select a DataSet">Create or select its format before importing CSV.</EmptyState> : inventory.error ? <p role="alert" className="pd-error">{inventory.error}</p> : inventory.loading ? <p role="status">Loading saved CSV files…</p> : <div className="pd-card">
-        <h2>Saved CSV files</h2>{inventory.files.length ? <ul className="pd-inventory-list">{inventory.files.map(saved => <li key={saved.id}><code>{saved.id}</code><span className="pd-muted">{Math.ceil(saved.bytes / 1024)} KiB</span><button disabled={busy || Boolean(downloadId)} onClick={() => void download(saved.id)}>{downloadId === saved.id ? 'Downloading…' : 'Download'}</button></li>)}</ul> : <p className="pd-muted">No CSV inventory files saved yet.</p>}
+        <h2>Saved CSV files</h2>
+        <CsvInventoryHelp />
+        {inventory.files.length ? <ul className="pd-inventory-list">{inventory.files.map(saved => <li key={saved.id}><code>{saved.id}</code><span className="pd-muted">{Math.ceil(saved.bytes / 1024)} KiB</span><button disabled={busy || Boolean(downloadId)} onClick={() => void download(saved.id)}>{downloadId === saved.id ? 'Downloading…' : 'Download'}</button></li>)}</ul> : <p className="pd-muted">No CSV inventory files saved yet.</p>}
       </div>}
     </>}
   </section>

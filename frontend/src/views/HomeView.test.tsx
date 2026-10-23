@@ -38,7 +38,7 @@ describe('Home connection configuration', () => {
   })
 
   it('gives Redis and PH Auth separate cards without claiming live health', async () => {
-    const refresh = show({ kind: 'ready', configuration: { redisConfigured: true, authConfigured: true } })
+    const refresh = show({ kind: 'ready', configuration: { redisConfigured: true, authConfigured: true, redisCommanderUrl: '' } })
     expect(within(screen.getByRole('article', { name: 'Redis' })).getByText('Configured')).toBeVisible()
     expect(within(screen.getByRole('article', { name: 'PocketHive Auth' })).getByText('Configured')).toBeVisible()
     expect(screen.getByText(/not a live health check/)).toBeVisible()
@@ -48,7 +48,7 @@ describe('Home connection configuration', () => {
   })
 
   it('distinguishes missing configuration for each service', () => {
-    show({ kind: 'ready', configuration: { redisConfigured: false, authConfigured: true } })
+    show({ kind: 'ready', configuration: { redisConfigured: false, authConfigured: true, redisCommanderUrl: '' } })
     expect(within(screen.getByRole('article', { name: 'Redis' })).getByText('Not configured')).toBeVisible()
     expect(within(screen.getByRole('article', { name: 'PocketHive Auth' })).getByText('Configured')).toBeVisible()
   })

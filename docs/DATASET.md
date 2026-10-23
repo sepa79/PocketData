@@ -36,7 +36,11 @@ Validation completes before publication. A CSV copy is fsynced and atomically pl
 
 Redis publication is not an atomic whole-file operation. A timeout may leave some rows published or a last write uncertain. The API reports the saved inventory identity and acknowledged progress; it never retries or resumes automatically. Inspect before repeating an import. A process crash does not prove that the CSV was never published. Initial scope has no duplicate-record guarantee, import ledger or exactly-once semantics.
 
-Metadata creation uses SET NX; this version deliberately does not edit an existing format or delete a DataSet. No operational keys are cleared by the application. Operator recovery remains stop affected work, clean queues, clear the intended namespace, restore format/data from inventory, then resume. Refill does not repeat SUT creation.
+Metadata creation uses SET NX. Editing accepts the exact definition opened by the editor plus the proposed definition. RedisDatasets validates the change and atomically compares/replaces the metadata key; a changed or removed definition fails explicitly, with no automatic retry. External script writes are included in this check. Existing metadata TTL is preserved.
+
+An edit can change the description, add lists and add optional fields. SUT/name, existing list names and existing field definitions stay fixed; adding required fields is rejected because existing records may not have them. No records are read, converted, moved or republished by an edit. A new list remains empty until a producer publishes records. The record format validator remains the single owner of these rules; the UI merely explains them and locks the fixed fields.
+
+There is no delete/clear action. Operator recovery remains stop affected work, clean queues, clear the intended namespace, restore format/data from inventory, then resume. Refill does not repeat SUT creation.
 
 Inventory listing is limited to 500 files per DataSet with an explicit error above that limit, never an unlabelled truncated result.
 

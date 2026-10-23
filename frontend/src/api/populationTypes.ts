@@ -34,9 +34,18 @@ export interface PopulationStep {
 export interface PopulationRecipe {
   name: string
   count: number
+  pacing: PopulationPacing
   values: Record<string, string>
   params: Record<string, string>
   steps: PopulationStep[]
+}
+
+export type PopulationPacingUnit = 'MILLISECONDS' | 'SECONDS' | 'MINUTES' | 'HOURS' | 'DAYS'
+
+export interface PopulationPacing {
+  mode: 'DELAY' | 'RATE'
+  value: number
+  unit: PopulationPacingUnit
 }
 
 export interface PopulationTarget {
@@ -55,4 +64,9 @@ export interface PopulationJob {
   step: string
   error: string
   inventoryId: string
+  pacing: PopulationPacing
+  elapsedMs: number
+  achievedPerSecond: number
+  waiting: boolean
+  waitRemainingMs: number
 }

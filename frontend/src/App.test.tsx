@@ -52,7 +52,7 @@ describe('PocketData shared-shell application', () => {
     const base = syntheticFetch()
     let configured = true
     auth.fetchWithAuth.mockImplementation((input: RequestInfo | URL, options?: RequestInit) => String(input) === '/api/connections'
-      ? Promise.resolve(response({ redisConfigured: configured, authConfigured: configured })) : base(input, options))
+      ? Promise.resolve(response({ redisConfigured: configured, authConfigured: configured, redisCommanderUrl: '' })) : base(input, options))
     show('/')
     await waitFor(() => expect(screen.getByRole('article', { name: 'Redis' })).toHaveTextContent('Configured'))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled())
@@ -95,12 +95,14 @@ describe('PocketData shared-shell application', () => {
     expect(screen.getByText('Select a SUT first')).toBeVisible()
     await screen.findByRole('option', { name: 'Synthetic A' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Selected SUT' }), 'synthetic-a')
-    expect(await screen.findByRole('heading', { name: 'cards' })).toBeVisible()
+    expect(await screen.findByRole('button', { name: 'cards' })).toBeVisible()
+    expect(screen.getByRole('table', { name: 'DataSets in selected SUT' })).toBeVisible()
+    expect(document.querySelector('header #sut-select')).toBeNull()
     expect(screen.getByText('12 records')).toBeVisible()
     expect(screen.getByText('0 records')).toBeVisible()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Selected SUT' }), 'synthetic-b')
     expect(await screen.findByText('No DataSets in this SUT')).toBeVisible()
-    expect(screen.queryByRole('heading', { name: 'cards' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'cards' })).not.toBeInTheDocument()
   })
   it('uses canEdit from the shared session, never a username-derived editor flag', async () => {
     auth.session = { user: { username: 'local-admin', displayName: 'Denied inactive user' }, canEdit: false, configured: true }
@@ -110,6 +112,34 @@ describe('PocketData shared-shell application', () => {
     expect(screen.queryByRole('button', { name: '＋ SUT' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'local-admin · Sign out' }))
     expect(auth.signOut).toHaveBeenCalledTimes(1)
+  })
+  it('opens details and retains the selected DataSet across CSV and population navigation', async () => {
+    show('/datasets?sut=synthetic-a&dataset=cards')
+    await userEvent.click(await screen.findByRole('button', { name: 'cards' }))
+    expect(await screen.findByRole('heading', { name: 'cards' })).toBeVisible()
+    expect(screen.getByLabelText('Full Redis key: synthetic-a:cards:data:ready')).toBeVisible()
+    const commander = await screen.findByRole('link', { name: 'Open Redis Commander ↗' })
+    expect(commander).toHaveAttribute('href', 'https://redis.example.test/')
+    expect(commander).toHaveAttribute('target', '_blank')
+    expect(commander).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.queryByRole('button', { name: 'Edit DataSet' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'CSV inventory & import' }))
+    expect(await screen.findByRole('combobox', { name: 'DataSet' })).toHaveValue('cards')
+    await userEvent.click(screen.getByRole('link', { name: 'Population' }))
+    expect(await screen.findByRole('combobox', { name: 'DataSet' })).toHaveValue('cards')
+    expect(screen.getByRole('combobox', { name: 'Selected SUT' })).toHaveValue('synthetic-a')
+  })
+  it('restores details from the URL and clears the previous DataSet when changing SUT', async () => {
+    show('/datasets/details?sut=synthetic-a&dataset=cards')
+    expect(await screen.findByRole('heading', { name: 'cards' })).toBeVisible()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Selected SUT' }), 'synthetic-b')
+    expect(await screen.findByText('No DataSets in this SUT')).toBeVisible()
+    expect(screen.queryByRole('region', { name: 'DataSet details' })).not.toBeInTheDocument()
+  })
+  it('does not replace a missing explicitly selected DataSet with another one', async () => {
+    show('/datasets/details?sut=synthetic-a&dataset=missing')
+    expect(await screen.findByText('DataSet not found')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'cards' })).not.toBeInTheDocument()
   })
   it('opens SUT edits for an authorized editor and dismisses without writes', async () => {
     auth.session = { user: { username: 'local-admin', displayName: 'Test administrator' }, canEdit: true, configured: true }

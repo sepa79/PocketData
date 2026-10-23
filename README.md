@@ -2,9 +2,13 @@
 
 Small SUT and Redis DataSet manager in the PocketHive family. PocketData manages definitions and preparation; PocketHive runs the load; PocketPlanner owns the plan. Live records use the selected PH Redis, not a private PocketData database.
 
-## Local working version
+## PocketData 0.1.0
 
-- Compact Hive-styled SUT → DataSet → CSV inventory views, with version in the header.
+- [MCP agent access](docs/MCP.md) at `/mcp`: inspect SUT/DataSets, prepare drafts for the UI, and explicitly start, monitor or stop Population using PH permissions and the existing runner.
+
+- Shared Hive shell with a labelled Selected SUT toolbar, DataSet table and dedicated details leading to edit, CSV inventory/import and Population. Selection survives navigation and reload.
+- Row-based endpoint/list/field editors, per-field descriptions/help and full Redis key previews distinguishing the fixed prefix from the list suffix.
+- Snapshot-checked DataSet edits: description, additional lists and optional fields; existing records and definitions remain intact.
 - Home landing page with workspace shortcuts and dedicated Redis/PH Auth configuration cards, separate from editing screens.
 - Persistent, revision-protected SUT catalogue; dataset format metadata stored in Redis.
 - Common field types, required subsets and preservation of extra CSV columns.
@@ -12,7 +16,7 @@ Small SUT and Redis DataSet manager in the PocketHive family. PocketData manages
 - PocketHive identity checks on every mutation; anonymous view-only. Raw inventory is local-admin only.
 - Shared React/TypeScript UI base imported from PH, not copied styles; one shared browser/JVM auth integration.
 - PocketHive sign-in confirmed in a PH tab, then completed in the original PocketData window. No PocketData callback or preview-port registration.
-- Bounded scripted population using actual PH request templates: JSON, SOAP 1.1/1.2, response-to-record mappings, explicit Run/Stop and durable response/record CSV before Redis publication.
+- Bounded scripted population using actual PH request templates: JSON, SOAP 1.1/1.2, response-to-record mappings, explicit Run/Stop and durable response/record CSV before Redis publication. Operator controls select iterations, Delay or best-effort Attempted rate; show achieved rate and interruptible waiting, with JSON under Advanced / Script.
 
 There is no Groovy/arbitrary-code engine, checkout state, per-record tracking or
 automatic retry/resume. For finite account/card creation, use **Population** with
@@ -34,7 +38,7 @@ docker compose up --build -d
 
 Open http://localhost:8785 directly or its current browser preview. The React UI is built into the Java backend; Node is only a build dependency. PocketData starts only its own app and inventory volume, never a private Redis. Records are published only by explicit CSV import or population jobs. See [PH Redis setup](docs/REDIS.md).
 
-Configure `POCKETHIVE_AUTH_BASE_URL`, the exact PH `POCKETDATA_REDIS_URL` and their explicit Docker networks. Compose fails for a missing/empty Redis endpoint. There is no runtime switch to another server after failure. Redis credentials stay on the backend and are not returned in the API.
+Configure `POCKETHIVE_AUTH_BASE_URL`, the exact PH `POCKETDATA_REDIS_URL` and their explicit Docker networks. The shared device client defaults to HTTPS or loopback HTTP public links; opt into a remote HTTP issuer explicitly with `POCKETHIVE_ALLOW_REMOTE_HTTP=true` (see [authentication](docs/AUTH.md)). Compose fails for a missing/empty Redis endpoint. There is no runtime switch to another server after failure. Redis credentials stay on the backend and are not returned in the API.
 
 Choose **Sign in**, then confirm in PH's tab; its existing DEV provider offers `local-admin` for editing and `local-viewer` for read-only use. The original page does not navigate away. Local `.env` selects the explicit PH network overlay. Preview ports do not appear in auth configuration; see [auth setup](docs/AUTH.md).
 
@@ -64,6 +68,13 @@ The process runs without auth/Redis configuration for read-only empty-catalogue 
 
 `tests/browser-smoke.js` is a Playwright function for an empty, isolated app at port 8786. `tests/auth-fixture.py` supplies synthetic identity only when explicitly opted into with `POCKETDATA_QA_AUTH_FIXTURE=1`; never configure the working app against it. The browser check covers view-only/editor access, SUT/DataSet creation, CSV import, inventory and desktop/mobile layout. It is not evidence of real PH sign-in.
 
+`tests/workspace.browser.cjs` launches that isolated Java app and identity fixture,
+then exercises the complete table/details/edit flow, persisted selection, stale
+edit conflicts, protected API and desktop/mobile views. It requires the explicitly
+isolated `POCKETDATA_TEST_REDIS_URL=redis://127.0.0.1:16385/0`, a built JAR and
+`PD_TEST_PLAYWRIGHT`/`PD_TEST_BROWSER` pointing at the installed browser tools.
+It does not start PH or touch the working app's volume/Redis.
+
 `tests/ph-device-login.browser.js` verifies real PH-tab confirmation, original-window polling, session restoration, independent tokens, central SSO reuse, viewer denial and token revocation. It never creates SUTs or publishes records. `tests/restart.browser.js` verifies the synthetic inventory after restarting the isolated test app. These browser functions accept a Playwright page; the local PH official ingress is port 8088, not a backend service port. Native-origin checks do not claim that the desktop's private preview forwarding/restart was exercised.
 
 `tests/preview-origins.cjs` runs the real sign-in check through two successive
@@ -88,8 +99,10 @@ for scope and [security review](docs/SECURITY_REVIEW.md) for residual findings.
 - [Changelog](CHANGELOG.md)
 
 `VERSION` owns the application version; `-dev` is not a published release. Source is
-published at [sepa79/PocketData](https://github.com/sepa79/PocketData). No application
-release, GHCR image publication or HF deployment has been performed.
+published at [sepa79/PocketData](https://github.com/sepa79/PocketData). See
+[release preparation and image deployment](docs/RELEASING.md) and
+[exact local qualification](docs/RELEASE_VERIFICATION.md). Local preparation is
+not GHCR publication or a deployed upgrade; publish only after human approval.
 
 ## License
 

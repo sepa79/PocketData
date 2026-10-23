@@ -1,6 +1,7 @@
 # PocketData working rules
 
 - Read docs/ARCHITECTURE.md, docs/DATASET.md and docs/AUTH.md before changing behavior.
+- MCP agents must follow docs/MCP.md; saving/loading a recipe never authorizes execution. Use the existing population, identity, CSV and Redis owners.
 - Prefer KISS and explicit configuration. No silent fallbacks, compatibility layers or speculative recovery machinery.
 - Keep one authoritative owner for validation, state, metadata and calculations. One Java production type and one clear responsibility per file.
 - Use Java 21. Declare Responsibility, Must not and Contract in production type headers. Reuse PH template/request contracts where needed; do not fork their parsers.

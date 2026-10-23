@@ -19,7 +19,7 @@ export function syntheticFetch() {
     const path = String(input)
     if (path === '/api/catalog') return response(catalog)
     if (path === '/api/info') return response({ version: '0.1.0-dev' })
-    if (path === '/api/connections') return response({ redisConfigured: true, authConfigured: true })
+    if (path === '/api/connections') return response({ redisConfigured: true, authConfigured: true, redisCommanderUrl: 'https://redis.example.test/' })
     if (path === '/api/suts/synthetic-a/datasets' && !options?.method) return response(datasets)
     if (path === '/api/suts/synthetic-b/datasets' && !options?.method) return response([])
     if (path.endsWith('/inventory')) return response([{ id: '00000000-0000-0000-0000-000000000001', bytes: 120 }])

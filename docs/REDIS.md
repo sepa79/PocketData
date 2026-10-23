@@ -8,6 +8,19 @@ owns the inventory volume; this change does not introduce additional writers.
 
 ## Explicit configuration
 
+`POCKETDATA_REDIS_COMMANDER_URL` optionally sets the browser-facing HTTP(S)
+address of an existing Redis Commander, for example `http://localhost:8081/`.
+DataSet details show **Open Redis Commander** beside the lists; use their full
+Redis keys to find records. The link opens a separate tab. Empty disables it;
+invalid schemes, credentials, query strings and fragments fail startup.
+Configure Commander to inspect the same Redis endpoint and logical database as
+PocketData. This URL is a public browser address, not the internal Redis URL or
+a Docker service name. It is not inferred from the PocketData preview port.
+PocketData neither starts nor proxies Commander, checks its availability nor
+passes a PH bearer token to it. Commander's access policy is managed separately;
+protect it appropriately for the records it exposes. The link is not an access
+control boundary or a new PocketData raw-record API.
+
 `POCKETDATA_REDIS_URL` is the sole connection selector. It is required by Compose:
 missing or empty values fail configuration validation. There is no default Redis
 host, alternate instance or automatic retry against another server. Existing

@@ -1,14 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import type { ProductApi } from '../api/productApi'
-import type { RecordField } from '../api/types'
+import type { DatasetDefinition, RecordField } from '../api/types'
 import { Dialog } from './Dialog'
 import { EditorActions } from './EditorActions'
+import { FieldHelp } from './FieldHelp'
+import { RecordFields } from './RecordFields'
+import { DatasetLists } from './DatasetLists'
 
-export function DatasetEditor({ sut, api, onClose, onSaved }: { sut: string; api: ProductApi; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [lists, setLists] = useState('cards')
-  const [fields, setFields] = useState('[]')
+export function DatasetEditor({ sut, api, original = null, onClose, onSaved }: {
+  sut: string; api: ProductApi; original?: DatasetDefinition | null; onClose: () => void; onSaved: (name: string) => void
+}) {
+  const [name, setName] = useState(original?.name ?? '')
+  const [description, setDescription] = useState(original?.description ?? '')
+  const [lists, setLists] = useState(original?.lists ?? ['ready'])
+  const [fields, setFields] = useState<RecordField[]>(original?.fields ?? [{ name: '', type: 'string', required: true }])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function save(event: FormEvent) {
@@ -17,21 +22,22 @@ export function DatasetEditor({ sut, api, onClose, onSaved }: { sut: string; api
     setBusy(true)
     setError('')
     try {
-      await api.createDataset({ sutId: sut, name, description, lists: lists.split(',').map(list => list.trim()), fields: JSON.parse(fields) as RecordField[] })
-      onSaved()
+      const definition = { sutId: sut, name, description, lists, fields }
+      if (original) await api.updateDataset(original, definition)
+      else await api.createDataset(definition)
+      onSaved(name)
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Save failed.') }
     finally { setBusy(false) }
   }
-  return <Dialog title="New DataSet" busy={busy} onClose={onClose}>
+  return <Dialog title={original ? 'Edit DataSet' : 'New DataSet'} busy={busy} onClose={onClose}>
     <form onSubmit={save}>
-      <p className="pd-muted">SUT: <strong>{sut}</strong></p>
+      <p className="pd-muted">Selected SUT: <strong>{sut}</strong></p>
       <fieldset disabled={busy}>
-        <label>Name / Redis namespace<input value={name} onChange={event => setName(event.target.value)} required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxLength={64} /></label>
-        <label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} maxLength={2000} rows={3} /></label>
-        <label>Data lists · comma separated<input value={lists} onChange={event => setLists(event.target.value)} required /></label>
-        <label>Record fields · JSON array<textarea value={fields} onChange={event => setFields(event.target.value)} required spellCheck={false} rows={6} className="pd-code" /></label>
+        <FieldHelp label="Name / Redis namespace" hint="A stable name shared by all lists in this DataSet." details="Use 1–64 lowercase letters, digits, underscores or hyphens. This becomes part of every Redis key and cannot change after creation.">{hint => <input aria-label="Name / Redis namespace" aria-describedby={hint} value={name} onChange={event => setName(event.target.value)} disabled={Boolean(original)} required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxLength={64} />}</FieldHelp>
+        <FieldHelp label="Description" hint="What data is here and which tests use it?" details="Up to 2,000 characters of public descriptive text. Do not put credentials or card/account values here.">{hint => <textarea aria-label="Description" aria-describedby={hint} value={description} onChange={event => setDescription(event.target.value)} maxLength={2000} rows={3} />}</FieldHelp>
+        <DatasetLists sut={sut} dataset={name} lists={lists} original={original?.lists ?? null} onChange={setLists} />
+        <RecordFields fields={fields} original={original?.fields ?? null} onChange={setFields} />
       </fieldset>
-      <p className="pd-muted">Each field has name, type (string, integer, number, boolean) and required. Extra CSV fields are preserved. Metadata is created once, never silently replaced.</p>
       <EditorActions busy={busy} error={error} onClose={onClose} />
     </form>
   </Dialog>

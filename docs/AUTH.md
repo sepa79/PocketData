@@ -35,8 +35,18 @@ canonical **browser-side** issuer `http://localhost:8088/auth-service`. Containe
 DNS names must never become public browser links. Neither address is inferred
 from Host/forwarded headers or from PocketData's preview port.
 
-The local PH integration branch `/home/sepa/PocketHive-ph-ui` includes the device
-registrations. Rebuild that profile, then PocketData:
+`POCKETHIVE_ALLOW_REMOTE_HTTP` explicitly selects the shared Java device client's
+policy for public verification and central logout URLs. Its default is `false`:
+HTTPS and loopback HTTP are allowed. Set it to `true` only when the selected PH
+deployment deliberately advertises a remote HTTP issuer. The internal
+`POCKETHIVE_AUTH_BASE_URL` may still use Docker HTTP with this flag disabled;
+an internal service address never grants permission for public remote HTTP.
+URI checks remain owned by the shared PH transport policy.
+
+PH 0.15.38 includes the device registrations; no further PH runtime changes are
+required for PocketData 0.1.0. Shared libraries are bundled in the PD build, not
+installed separately on PH. The following is the existing local integration
+profile, not a requirement to rebuild PH from source on each PD installation:
 
 ```sh
 cd /home/sepa/PocketHive-ph-ui
@@ -46,7 +56,13 @@ cd /home/sepa/PocketData
 docker compose up --build -d pocketdata
 ```
 
-Open `http://localhost:8785/#suts` or its current forwarded preview. The PH DEV
+When those integration containers already exist, start just their auth-service
+and UI rather than the old release profile. Only one PH ingress may bind 8088;
+stop the other profile's UI/auth first without deleting volumes. The local
+integration containers are `pp-ph-integration-auth-service-1` and
+`pp-ph-integration-ui-1`. Redis and worker stacks need no restart for login.
+
+Open `http://localhost:8785/#/suts` or its current forwarded preview. The PH DEV
 provider's `local-admin` and `local-viewer` accounts are configured by PH, not
 PocketData. Production uses PH's configured identity provider and HTTPS public
 issuer. Device clients have no callback URI, client secret or refresh grant.
@@ -61,6 +77,11 @@ app's token has been revoked. Central logout does not promise revocation of all
 independent tokens already issued to other applications.
 
 ## Verification boundaries
+
+The [MCP endpoint](MCP.md) applies this same fresh PH identity policy to its
+private tools. Native agents obtain their own device session and place the bearer
+in client secret/header configuration; MCP does not borrow browser tab storage
+or create a second login authority.
 
 Use the real official ingress for deployed browser tests. Isolated identity
 fixtures cover denial/transport behavior only, never prove PH SSO. Two native app

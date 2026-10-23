@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-10-23
+
+### Release preparation
+- Add GitHub Actions validation with isolated Redis/browser checks and tag-matched multi-platform GHCR publishing. Support an explicitly selected image in Compose and document the release/deployment process.
+- Update Vitest to 4.1.12 for development-tool mock-registration advisories; retain GPL-3.0-or-later, matching PocketHive.
+
+### CSV inventory explanation
+- Explain in CSV inventory and Population where saved files come from, why they survive restarts and how they can be reused. Distinguish saved snapshots from live Redis records and successful publication.
+
+### Live record inspection
+- Link from DataSet Redis lists to the explicitly configured external Redis Commander in a new tab; retain full Redis keys in the table for selecting the correct list.
+
+### MCP population control
+- Serve Streamable HTTP MCP on the application listener with public catalogue/format inspection and fresh PH local-admin checks for population tools.
+- Add recipe preflight, explicit start/status/list/stop and revision-checked shared drafts. Keep execution, validation, CSV and Redis publication in the existing owners.
+- Add Load saved script in Population: an agent's saved draft fills operator controls without running requests. Apply strict body limits and explicit Host/Origin allowlists.
+
+### Population pacing
+- Add explicit per-recipe Delay (milliseconds through days, zero means as fast as possible) and Attempted rate (per second/minute/hour/day, best effort). Keep one sequential executor and never queue missed starts.
+- Expose iterations and pacing as operator controls, keep JSON under Advanced / Script, and show achieved full-iteration rate and remaining wait. Stop interrupts waiting immediately; no wait follows the last record.
+- Require explicit pacing in the current recipe format; preserve shared PH HTTP/SOAP calls, runner-owned iteration counters, durable CSV before Redis and no automatic retries/resume.
+
+### DataSet workspace
+- Include the non-secret example environment file in Docker builds while keeping local environment settings excluded.
+- Move Selected SUT below the header with a visible label; retain exact SUT/DataSet context through navigation and reload.
+- Replace DataSet cards with a table and dedicated details showing record fields, live list counts, full Redis keys and CSV/population actions.
+- Replace JSON-only SUT endpoint and DataSet format forms with editable rows, concise field descriptions and detailed help. Show the fixed Redis prefix separately from the list suffix, including import/population targets and confirmation.
+- Add authenticated, atomic snapshot-checked DataSet edits for descriptions, new lists and optional fields. Preserve existing definitions and records; reject stale writes and incompatible format changes.
+- Link the published PH portable-template contract and Scenario variables documentation; explicitly distinguish population params from variables.yaml. No second template/variable resolver is introduced.
+
+- Adopt the shared Java device client's explicit public transport permission: keep HTTPS/loopback HTTP by default and allow remote HTTP only with `POCKETHIVE_ALLOW_REMOTE_HTTP=true`. Cover device start and central logout through the product session API.
+
 - Establish the public PocketData source repository under GPL-3.0-or-later,
   matching PocketHive. Exclude local environment settings, inventory, credentials
   and build/test artifacts from source publication; no application release.
@@ -42,4 +74,4 @@
 - Local shared-PH-network startup profile and real-browser SSO regression: anonymous/viewer restrictions, admin identity, shared PH login and central logout, without mutating DataSet data.
 
 ### Not implemented
-- General PH sequence/Groovy execution, agent/MCP integration, shared mix controls, record tracking and automated recovery. Finite HTTP/SOAP resource creation is available through Population.
+- General PH sequence/Groovy execution, shared mix controls, record tracking and automated recovery. Finite HTTP/SOAP resource creation and explicit MCP population control are available.

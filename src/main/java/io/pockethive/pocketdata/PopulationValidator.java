@@ -21,10 +21,11 @@ public final class PopulationValidator {
         this.mapper = mapper; this.templates = templates;
     }
     public PopulationRequest validate(JsonNode source, SutDefinition sut, DatasetDefinition format) {
-        fields(source, Set.of("name", "count", "values", "params", "steps"));
+        fields(source, Set.of("name", "count", "pacing", "values", "params", "steps"));
         String name = text(source.get("name"), 160);
         JsonNode count = source.get("count");
         if (!count.isIntegralNumber() || !count.canConvertToInt() || count.intValue() < 1 || count.intValue() > 1000) throw new ApiFailure(400, "Population count must be 1–1000.");
+        PopulationPacing pacing = PopulationPacing.parse(source.get("pacing"));
         Map<String, String> values = strings(source.get("values"), 200, 8192);
         Map<String, String> params = strings(source.get("params"), 200, 8192);
         if (params.containsKey("iteration")) throw new ApiFailure(400, "params.iteration is owned by the population loop.");
@@ -50,7 +51,7 @@ public final class PopulationValidator {
         }
         if (columns.isEmpty() || columns.size() > 200 || columns.stream().anyMatch(field -> !field.matches("[A-Za-z][A-Za-z0-9_]{0,79}"))) throw new ApiFailure(400, "Use at most 200 canonical output column names.");
         for (RecordField field : format.fields()) if (field.required() && !columns.contains(field.name())) throw new ApiFailure(400, "The recipe cannot supply every required DataSet field.");
-        return new PopulationRequest(name, count.intValue(), Map.copyOf(values), Map.copyOf(params), List.copyOf(result), List.copyOf(columns));
+        return new PopulationRequest(name, count.intValue(), pacing, Map.copyOf(values), Map.copyOf(params), List.copyOf(result), List.copyOf(columns));
     }
     private static void fields(JsonNode value, Set<String> expected) {
         if (value == null || !value.isObject()) throw new ApiFailure(400, "Expected a recipe object.");

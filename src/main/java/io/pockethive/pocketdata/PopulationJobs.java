@@ -14,29 +14,28 @@ import io.pockethive.templating.PortableHttpRequest;
 /** Responsibility: coordinate one finite script job through existing request, inventory and Redis owners. Must not: parse templates/responses, invent recovery or duplicate persisted state. Contract: docs/POPULATION.md. */
 @Component
 public final class PopulationJobs {
-    private final CatalogStore catalog;
+    private final PopulationPreparation preparation;
     private final RedisDatasets redis;
     private final CsvInventory inventory;
     private final RecordFormat formats;
-    private final PopulationValidator validator;
     private final PopulationTemplates templates;
     private final PopulationHttp http;
     private final PopulationResponses responses;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(Thread.ofPlatform().daemon().name("pd-population").factory());
     private final Map<String, PopulationJob> jobs = new LinkedHashMap<>();
     private PopulationJob active;
-    public PopulationJobs(CatalogStore catalog, RedisDatasets redis, CsvInventory inventory, RecordFormat formats,
-                          PopulationValidator validator, PopulationTemplates templates, PopulationHttp http, PopulationResponses responses) {
-        this.catalog = catalog; this.redis = redis; this.inventory = inventory; this.formats = formats;
-        this.validator = validator; this.templates = templates; this.http = http; this.responses = responses;
+    public PopulationJobs(PopulationPreparation preparation, RedisDatasets redis, CsvInventory inventory, RecordFormat formats,
+                          PopulationTemplates templates, PopulationHttp http, PopulationResponses responses) {
+        this.preparation = preparation; this.redis = redis; this.inventory = inventory; this.formats = formats;
+        this.templates = templates; this.http = http; this.responses = responses;
     }
     public synchronized PopulationSnapshot start(String sut, String name, String list, JsonNode source) throws IOException {
         if (active != null && !active.finished()) throw new ApiFailure(409, "A population job is already active: " + active.snapshot().id());
-        DatasetDefinition format = redis.require(sut, name);
-        if (!format.lists().contains(list)) throw new ApiFailure(400, "Unknown target list.");
-        PopulationRequest recipe = validator.validate(source, catalog.require(sut), format);
+        PreparedPopulation prepared = preparation.prepare(sut, name, list, source);
+        DatasetDefinition format = prepared.format();
+        PopulationRequest recipe = prepared.recipe();
         GeneratedInventory output = inventory.beginGeneration(sut, name, recipe.columns());
-        PopulationJob job = new PopulationJob(output.id(), sut, name, recipe.count());
+        PopulationJob job = new PopulationJob(output.id(), sut, name, recipe.count(), recipe.pacing());
         active = job;
         while (jobs.size() >= 20) jobs.remove(jobs.keySet().iterator().next());
         jobs.put(output.id(), job);
@@ -46,6 +45,9 @@ public final class PopulationJobs {
     }
     public synchronized PopulationSnapshot read(String sut, String dataset, String id) {
         return require(sut, dataset, id).snapshot();
+    }
+    public synchronized java.util.List<PopulationSnapshot> list(String sut, String dataset) {
+        return jobs.values().stream().filter(job -> job.belongsTo(sut, dataset)).map(PopulationJob::snapshot).toList();
     }
     public synchronized PopulationSnapshot stop(String sut, String dataset, String id) {
         PopulationJob job = require(sut, dataset, id); job.stop(); return job.snapshot();
@@ -58,6 +60,7 @@ public final class PopulationJobs {
     private void run(PopulationJob job, DatasetDefinition format, String list, PopulationRequest recipe, GeneratedInventory output) {
         try (output) {
             records: for (int iteration = 1; iteration <= recipe.count() && !job.stopped(); iteration++) {
+                long iterationStarted = System.nanoTime();
                 unchanged(format);
                 Map<String, String> record = new LinkedHashMap<>(recipe.values());
                 for (PopulationStep step : recipe.steps()) {
@@ -79,6 +82,7 @@ public final class PopulationJobs {
                 unchanged(format);
                 redis.publish(format, list, converted);
                 job.published();
+                if (iteration < recipe.count()) job.awaitNext(recipe.pacing().delayAfter(System.nanoTime() - iterationStarted));
             }
         } catch (ApiFailure failure) { job.fail(failure.getMessage() + " Inspect the saved CSV/responses before repeating this job."); return; }
         catch (Exception failure) { job.fail("Population failed; saved CSV may be partial and a SUT result may be uncertain. No retry was performed."); return; }

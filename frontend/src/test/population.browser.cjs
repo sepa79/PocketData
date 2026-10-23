@@ -11,6 +11,7 @@ async function main() {
   const browser = await chromium.launch({ executablePath: process.env.PD_TEST_BROWSER, headless: true, args: ['--no-sandbox'] })
   const recipe = {
     name: 'Synthetic SOAP browser recipe', count: 2, values: { customer: '001' }, params: { customer: '009', iteration: '999' },
+    pacing: { mode: 'DELAY', value: 0, unit: 'MILLISECONDS' },
     steps: [{ name: 'Create card', endpoint: 'cards', call: {
       profile: 'portable-v1', requires: ['xml_path', 'xml_text', 'xml_attr', 'soap11'],
       request: {
@@ -24,7 +25,7 @@ async function main() {
   const sut = { id: 'synthetic-ui', name: 'Synthetic UI only', description: 'Browser fixture, no SUT calls', endpoints: { cards: 'https://example.invalid/cards' } }
   const format = { sutId: sut.id, name: 'cards', description: 'Synthetic', lists: ['ready', 'returned'], fields: [{ name: 'accountNumber', type: 'string', required: true }] }
   const base = `/api/suts/${sut.id}/datasets/cards`
-  const job = { id: 'ui-fixture-job', status: 'RUNNING', total: 2, completed: 0, published: 0, iteration: 1, step: 'Create card', error: '', inventoryId: '' }
+  const job = { id: 'ui-fixture-job', status: 'RUNNING', total: 2, completed: 0, published: 0, iteration: 1, step: 'Create card', error: '', inventoryId: '', pacing: { mode: 'RATE', value: 20, unit: 'SECONDS' }, elapsedMs: 1_200_000, achievedPerSecond: 3 / 3600, waiting: true, waitRemainingMs: 172_800_000 }
   const failures = []
 
   async function fixture(allowed) {
@@ -48,10 +49,10 @@ async function main() {
       else if (key === `/api/suts/${sut.id}/datasets`) value = [{ format, counts: { ready: 0, returned: stopped ? 1 : 0 } }]
       else if (key === `${base}/inventory` && allowed) value = stopped ? [{ id: 'ui-inventory', bytes: 32 }] : []
       else if (key === `${base}/population` && method === 'POST' && allowed) value = job
-      else if (key === `${base}/population/${job.id}` && allowed) value = { ...job, ...(stopped ? { status: 'STOPPED', completed: 1, published: 1, inventoryId: 'ui-inventory' } : {}) }
+      else if (key === `${base}/population/${job.id}` && allowed) value = { ...job, ...(stopped ? { status: 'STOPPED', completed: 1, published: 1, inventoryId: 'ui-inventory', waiting: false, waitRemainingMs: 0 } : {}) }
       else if (key === `${base}/population/${job.id}/stop` && method === 'POST' && allowed) {
         stopped = true
-        value = { ...job, status: 'STOPPED', completed: 1, published: 1, inventoryId: 'ui-inventory' }
+        value = { ...job, status: 'STOPPED', completed: 1, published: 1, inventoryId: 'ui-inventory', waiting: false, waitRemainingMs: 0 }
       } else if (key === `${base}/population/${job.id}/responses` && allowed) {
         await route.fulfill({ status: 200, contentType: 'text/csv', body: 'iteration,status\n1,200\n' })
         return
@@ -82,6 +83,12 @@ async function main() {
 
     const { context, page, requests } = await fixture(true)
     await page.getByRole('button', { name: 'Expand view sidebar' }).click()
+    const advanced = page.getByText('Advanced / Script', { exact: true })
+    assert.equal(await page.getByRole('textbox', { name: 'JSON script' }).isVisible(), false)
+    assert.equal(await page.getByText('Template and SOAP contract', { exact: true }).isVisible(), false)
+    await page.getByRole('spinbutton', { name: 'Iterations', exact: true }).waitFor()
+    await page.screenshot({ path: path.join(artifacts, 'population-controls-desktop.png') })
+    await advanced.click()
     await page.getByText('Template and SOAP contract', { exact: true }).click()
     const help = page.locator('.pd-population-help')
     const helpText = await help.innerText()
@@ -96,6 +103,13 @@ async function main() {
     await page.screenshot({ path: path.join(artifacts, 'population-functions-desktop.png') })
     await page.getByText('Template and SOAP contract', { exact: true }).click()
     await page.getByRole('textbox', { name: 'JSON script' }).fill(JSON.stringify(recipe, null, 2))
+    assert.equal(await page.getByRole('spinbutton', { name: 'Iterations', exact: true }).inputValue(), '2')
+    await page.getByRole('combobox', { name: 'Pacing mode', exact: true }).selectOption('RATE')
+    await page.getByRole('spinbutton', { name: 'Pacing value', exact: true }).fill('20')
+    await page.getByRole('combobox', { name: 'Pacing unit', exact: true }).selectOption('SECONDS')
+    const submittedRecipe = { ...recipe, pacing: { mode: 'RATE', value: 20, unit: 'SECONDS' } }
+    assert.deepEqual(JSON.parse(await page.getByRole('textbox', { name: 'JSON script' }).inputValue()), submittedRecipe)
+    await advanced.click()
     await page.getByRole('combobox', { name: 'Target list', exact: true }).selectOption('returned')
     await page.screenshot({ path: path.join(artifacts, 'population-desktop.png') })
     await page.getByRole('button', { name: 'Run script…', exact: true }).click()
@@ -103,17 +117,24 @@ async function main() {
     const confirmation = page.getByRole('dialog', { name: 'Run population script?' })
     await confirmation.waitFor()
     assert.match(await confirmation.innerText(), /synthetic-ui[\s\S]*cards[\s\S]*returned[\s\S]*Iterations[\s\S]*2/)
+    assert.match(await confirmation.innerText(), /Attempted rate \(best effort\): 20 per second/)
     await page.screenshot({ path: path.join(artifacts, 'population-confirmation.png') })
     await confirmation.getByRole('button', { name: 'Confirm Run' }).click()
     const status = page.getByRole('region', { name: 'Population job', exact: true })
     await status.getByRole('heading', { name: 'RUNNING', exact: true }).waitFor()
-    assert.equal(await page.getByRole('textbox', { name: 'JSON script' }).isDisabled(), true)
+    for (const label of ['Iterations', 'Pacing value']) assert.equal(await page.getByRole('spinbutton', { name: label, exact: true }).isDisabled(), true)
+    for (const label of ['Pacing mode', 'Pacing unit']) assert.equal(await page.getByRole('combobox', { name: label, exact: true }).isDisabled(), true)
+    assert.match(await status.innerText(), /3\/h/)
+    assert.match(await status.innerText(), /20 min/)
+    assert.match(await status.innerText(), /2 days remaining/)
+    await status.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: path.join(artifacts, 'population-waiting.png') })
     assert.equal(await page.getByRole('combobox', { name: 'Selected SUT' }).isDisabled(), true)
     await page.waitForTimeout(1150)
     assert.equal(requests.filter(item => item.key === `${base}/population` && item.method === 'POST').length, 1)
     const start = requests.find(item => item.key === `${base}/population` && item.method === 'POST')
     assert.equal(start.query, '?list=returned')
-    assert.deepEqual(JSON.parse(start.body), recipe)
+    assert.deepEqual(JSON.parse(start.body), submittedRecipe)
     await status.getByRole('button', { name: 'Stop', exact: true }).click()
     await status.getByRole('heading', { name: 'STOPPED', exact: true }).waitFor()
     await page.getByRole('region', { name: 'Population inventory', exact: true }).getByText('ui-inventory', { exact: true }).waitFor()
@@ -132,9 +153,10 @@ async function main() {
       mains: document.querySelectorAll('main').length,
       horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
       documentScroll: document.documentElement.scrollHeight > innerHeight,
-      controlsClipped: [...document.querySelectorAll('.pd-population-editor input, .pd-population-editor select, .pd-population-editor textarea')].some(element => element.getBoundingClientRect().right > innerWidth),
+      controlsClipped: [...document.querySelectorAll('.pd-population-editor input, .pd-population-editor select, .pd-population-editor textarea')].some(element => element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().right > innerWidth),
     }))
     assert.deepEqual(layout, { headers: 1, mains: 1, horizontalOverflow: false, documentScroll: false, controlsClipped: false })
+    await advanced.click()
     await page.getByText('Template and SOAP contract', { exact: true }).click()
     await help.scrollIntoViewIfNeeded()
     await page.screenshot({ path: path.join(artifacts, 'population-contract-mobile.png') })

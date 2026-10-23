@@ -15,13 +15,14 @@ public final class PhAuthClients {
     private final AuthServiceClient identity;
     private final DeviceAuthClient device;
 
-    public PhAuthClients(@Value("${POCKETHIVE_AUTH_BASE_URL:}") String base) {
+    public PhAuthClients(@Value("${POCKETHIVE_AUTH_BASE_URL:}") String base,
+                         @Value("${POCKETHIVE_ALLOW_REMOTE_HTTP:false}") boolean allowRemoteHttp) {
         configured = !base.isBlank();
         if (configured) {
             URI endpoint = URI.create(base);
             identity = new AuthServiceClient(endpoint, Duration.ofSeconds(5), Duration.ofSeconds(5));
             device = new DeviceAuthClient(endpoint, PocketHiveDeviceAuth.DATA_CLIENT_ID,
-                Duration.ofSeconds(5), Duration.ofSeconds(5));
+                Duration.ofSeconds(5), Duration.ofSeconds(5), allowRemoteHttp);
         } else {
             identity = null;
             device = null;

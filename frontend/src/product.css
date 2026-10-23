@@ -23,7 +23,7 @@ code { font-size: 12px; overflow-wrap: anywhere; }
 .pd-context select { max-width: 250px; min-width: 140px; }
 .pd-identity { white-space: nowrap; }
 .pd-identity button { font-size: 12px; }
-.pd-workspace-toolbar { min-height: 44px; padding: 5px 14px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; border-bottom: 1px solid var(--border2); }
+.pd-workspace-toolbar { min-height: 64px; padding: 8px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border2); }
 .pd-auth-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; margin-bottom: 14px; border: 1px solid var(--accent); border-radius: 8px; color: var(--muted); background: var(--panel); }
 .pd-nav-icon { font-size: 22px; line-height: 1; }
 .pd-panel { display: grid; gap: 14px; }
@@ -57,7 +57,7 @@ code { font-size: 12px; overflow-wrap: anywhere; }
 .pd-inventory-list li span { white-space: nowrap; font-size: 12px; }
 .pd-error { color: var(--status-error); border: 1px solid var(--status-error); padding: 12px; border-radius: 7px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
 .pd-success { color: var(--status-success); overflow-wrap: anywhere; }
-.pd-dialog { width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; color: var(--text); background: var(--select-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 22px 90px #0009; }
+.pd-dialog { width: min(820px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; color: var(--text); background: var(--select-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 22px 90px #0009; }
 .pd-dialog::backdrop { background: #0009; backdrop-filter: blur(3px); }
 .pd-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
 .pd-dialog-heading h2 { font-size: 20px; }
@@ -70,11 +70,17 @@ code { font-size: 12px; overflow-wrap: anywhere; }
 .pd-population-editor label { min-width: 0; }
 .pd-population-editor input, .pd-population-editor select, .pd-population-editor textarea { width: 100%; min-width: 0; }
 .pd-population-script { height: clamp(220px, 36vh, 420px); min-height: 160px; resize: vertical; tab-size: 2; }
+.pd-population-controls { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 12px; }
+.pd-population-controls legend { padding: 0 0 10px; font-weight: 600; }
+.pd-population-advanced > summary { cursor: pointer; }
+.pd-population-advanced > div { display: grid; gap: 12px; margin-top: 12px; }
 .pd-population-help { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .pd-population-help summary { cursor: pointer; color: var(--text); }
 .pd-population-help p, .pd-population-help dl { margin-top: 9px; }
 .pd-population-help[open] { max-height: 220px; overflow: auto; }
 .pd-population-counters { margin: 0; display: flex; flex-wrap: wrap; gap: 14px 28px; }
+.pd-population-run-heading { flex-wrap: wrap; }
+.pd-population-run-heading h2 { white-space: nowrap; }
 .pd-population-counters div { display: grid; gap: 4px; }
 .pd-population-counters dt { font-size: 12px; color: var(--muted); }
 .pd-population-counters dd { margin: 0; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -101,6 +107,39 @@ code { font-size: 12px; overflow-wrap: anywhere; }
 .pd-connection-configured { color: var(--status-success); }
 .pd-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; }
 .pd-configuration-note { font-size: 12px; }
+.pd-table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
+.pd-table { width: 100%; min-width: 480px; border-collapse: collapse; text-align: left; font-size: 13px; }
+.pd-table caption { text-align: left; }
+.pd-table th, .pd-table td { padding: 13px 16px; vertical-align: top; overflow-wrap: anywhere; }
+.pd-table thead { color: var(--muted); background: var(--panel2); white-space: nowrap; }
+.pd-table tbody tr + tr { border-top: 1px solid var(--border2); }
+.pd-table tbody tr:hover { background: var(--panel2); }
+.pd-table th[scope='row'] { font-weight: 600; }
+.pd-table .pd-description { min-width: 140px; max-width: 450px; }
+.pd-text-button { padding: 0; background: transparent; border: 0; min-height: 24px; text-align: left; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.pd-list-count { display: flex; justify-content: space-between; gap: 20px; padding: 2px 0; white-space: nowrap; }
+.pd-list-count span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pd-redis-key { display: inline; overflow-wrap: anywhere; line-height: 1.6; }
+.pd-redis-key span { color: var(--muted); }
+.pd-redis-key strong { color: var(--text); background: var(--panel2); border-radius: 3px; padding: 1px 2px; }
+.pd-key-preview { display: grid; gap: 5px; min-width: 0; }
+.pd-field { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.pd-field > input, .pd-field > select { width: 100%; min-width: 0; }
+.pd-field > input[type='checkbox'] { width: 18px; min-height: 18px; height: 18px; margin: 9px 0; accent-color: var(--accent); }
+.pd-field-label { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; }
+.pd-field-hint { font-size: 12px; line-height: 1.45; color: var(--muted); }
+.pd-help { position: relative; display: inline-flex; }
+.pd-help > button { width: 20px; min-height: 20px; padding: 0; border-radius: 50%; font-size: 12px; }
+.pd-help [role='tooltip'] { display: none; position: absolute; z-index: 20; top: 26px; left: -90px; width: min(260px, calc(100vw - 90px)); padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--select-bg); color: var(--text); font-size: 12px; font-weight: normal; line-height: 1.5; box-shadow: 0 8px 24px #0006; }
+.pd-help:hover [role='tooltip'], .pd-help:focus-within [role='tooltip'] { display: block; }
+.pd-editor-section { display: grid; gap: 14px; border-top: 1px solid var(--border2); padding-top: 16px; }
+.pd-editor-section > p { font-size: 13px; }
+.pd-edit-row { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(200px, 2fr) auto; gap: 12px; align-items: start; }
+.pd-record-row { grid-template-columns: minmax(130px, 2fr) minmax(100px, 1fr) 100px auto; }
+.pd-edit-row > button, .pd-list-editor > button { align-self: center; }
+.pd-list-editor { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(160px, 2fr) auto; gap: 12px; align-items: center; }
+.pd-target { display: grid; gap: 12px; }
+.pd-target > a { justify-self: start; font-size: 13px; }
 @media (max-width: 760px) {
   .pd-version { display: none; }
   .pd-brand img { width: 128px; }
@@ -110,9 +149,13 @@ code { font-size: 12px; overflow-wrap: anywhere; }
   .pd-home-shortcuts, .pd-home-connection-grid { grid-template-columns: minmax(0, 1fr); }
   .pd-home { gap: 20px; }
   .pd-inventory-list li { flex-wrap: wrap; }
+  .pd-edit-row, .pd-list-editor { grid-template-columns: minmax(0, 1fr); padding: 12px; border: 1px solid var(--border2); border-radius: 8px; }
+  .pd-edit-row > button, .pd-list-editor > button { justify-self: start; }
+  .pd-context select { max-width: min(360px, 65vw); }
+  .pd-table th, .pd-table td { padding: 10px; }
 }
 @media (max-width: 440px) {
   .pd-brand img { width: 96px; }
-  .pd-context select { max-width: 105px; }
+  .pd-context select { max-width: 62vw; }
   .pd-dialog { padding: 18px; }
 }

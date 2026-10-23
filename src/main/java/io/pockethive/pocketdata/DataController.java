@@ -13,11 +13,12 @@ public class DataController {
     private final RedisDatasets redis;
     private final CsvInventory inventory;
     private final AuthService auth;
-    public DataController(CatalogStore catalog, RedisDatasets redis, CsvInventory inventory, AuthService auth) {
-        this.catalog = catalog; this.redis = redis; this.inventory = inventory; this.auth = auth;
+    private final RedisCommanderLink commander;
+    public DataController(CatalogStore catalog, RedisDatasets redis, CsvInventory inventory, AuthService auth, RedisCommanderLink commander) {
+        this.catalog = catalog; this.redis = redis; this.inventory = inventory; this.auth = auth; this.commander = commander;
     }
     @GetMapping("/api/catalog") public Object read() throws IOException { return catalog.read(); }
-    @GetMapping("/api/connections") public Object connections() { return Map.of("redisConfigured", redis.configured(), "authConfigured", auth.configured()); }
+    @GetMapping("/api/connections") public Object connections() { return Map.of("redisConfigured", redis.configured(), "authConfigured", auth.configured(), "redisCommanderUrl", commander.url()); }
     @PutMapping("/api/catalog") public Object save(@RequestHeader(value="Authorization", required=false) String authorization, @RequestBody CatalogSnapshot body) throws IOException {
         auth.requireEditor(authorization); return catalog.save(body);
     }
@@ -29,6 +30,9 @@ public class DataController {
     }
     @PostMapping(value="/api/suts/{sut}/datasets/{dataset}/import", consumes="text/csv") public Object importCsv(@PathVariable String sut, @PathVariable String dataset, @RequestParam String list, @RequestHeader(value="Authorization", required=false) String authorization, HttpServletRequest request) throws IOException {
         auth.requireEditor(authorization); return inventory.importCsv(sut, dataset, list, request.getInputStream());
+    }
+    @PutMapping("/api/suts/{sut}/datasets/{dataset}") public Object update(@PathVariable String sut, @PathVariable String dataset, @RequestHeader(value="Authorization", required=false) String authorization, @RequestBody DatasetUpdate body) throws IOException {
+        auth.requireEditor(authorization); catalog.require(sut); return redis.update(sut, dataset, body);
     }
     @GetMapping("/api/suts/{sut}/datasets/{dataset}/inventory") public Object inventories(@PathVariable String sut, @PathVariable String dataset, @RequestHeader(value="Authorization", required=false) String authorization) throws IOException {
         auth.requireEditor(authorization); return inventory.list(sut, dataset);

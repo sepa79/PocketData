@@ -1,12 +1,16 @@
 services:
   pocketdata:
     build: .
-    image: pocketdata-local:dev
+    image: "${POCKETDATA_IMAGE:-pocketdata-local:dev}"
     ports:
       - "127.0.0.1:8785:8785"
     environment:
       POCKETDATA_REDIS_URL: "${POCKETDATA_REDIS_URL:?Set the explicit Redis URL used by the selected PH environment}"
+      POCKETDATA_REDIS_COMMANDER_URL: "${POCKETDATA_REDIS_COMMANDER_URL:-}"
       POCKETHIVE_AUTH_BASE_URL: "${POCKETHIVE_AUTH_BASE_URL:-}"
+      POCKETHIVE_ALLOW_REMOTE_HTTP: "${POCKETHIVE_ALLOW_REMOTE_HTTP:-false}"
+      POCKETDATA_MCP_ALLOWED_HOSTS: "${POCKETDATA_MCP_ALLOWED_HOSTS:-}"
+      POCKETDATA_MCP_ALLOWED_ORIGINS: "${POCKETDATA_MCP_ALLOWED_ORIGINS:-}"
     volumes:
       - pocketdata_inventory:/data
     extra_hosts:

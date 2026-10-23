@@ -24,7 +24,7 @@ class AuthServiceTest {
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
         });
-        server.start(); auth = new AuthService(new PhAuthClients("http://127.0.0.1:" + server.getAddress().getPort()));
+        server.start(); auth = new AuthService(new PhAuthClients("http://127.0.0.1:" + server.getAddress().getPort(), false));
     }
     @AfterEach void stop() { server.stop(0); }
     @Test void anonymousCannotEditAndDoesNotCallAuth() {
@@ -48,12 +48,12 @@ class AuthServiceTest {
     }
     @Test void neverFollowsAuthRedirects() {
         server.createContext("/redirect/api/auth/me", exchange -> { exchange.getResponseHeaders().add("Location", "/api/auth/me"); exchange.sendResponseHeaders(302, -1); exchange.close(); });
-        AuthService redirected = new AuthService(new PhAuthClients("http://127.0.0.1:" + server.getAddress().getPort() + "/redirect"));
+        AuthService redirected = new AuthService(new PhAuthClients("http://127.0.0.1:" + server.getAddress().getPort() + "/redirect", false));
         assertEquals(503, assertThrows(ApiFailure.class, () -> redirected.requireEditor("Bearer synthetic")).status());
         assertEquals(0, calls.get());
     }
     @Test void missingAuthDeniesBearerAccess() {
-        assertEquals(503, assertThrows(ApiFailure.class, () -> new AuthService(new PhAuthClients("")).access("Bearer synthetic")).status());
+        assertEquals(503, assertThrows(ApiFailure.class, () -> new AuthService(new PhAuthClients("", false)).access("Bearer synthetic")).status());
     }
     @Test void invalidBearerIsRejectedBeforeIdentityLookup() {
         assertEquals(401, assertThrows(ApiFailure.class, () -> auth.access("Bearer synthetic injected")).status());

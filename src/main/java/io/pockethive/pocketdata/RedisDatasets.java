@@ -5,6 +5,7 @@ import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
+import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import jakarta.annotation.PreDestroy;
@@ -48,11 +49,31 @@ public class RedisDatasets {
         try {
             String raw = connection().sync().get(prefix(sut, name) + ":meta:format");
             if (raw == null) throw new ApiFailure(404, "Dataset format not found.");
-            DatasetDefinition result = formats.validate(mapper.readValue(raw, DatasetDefinition.class));
-            if (!result.sutId().equals(sut) || !result.name().equals(name)) throw new ApiFailure(502, "Dataset metadata does not match its Redis namespace.");
-            return result;
+            return decode(sut, name, raw);
         } catch (ApiFailure failure) { throw failure; }
         catch (Exception failure) { throw new ApiFailure(503, "Redis dataset metadata could not be read. Check its format."); }
+    }
+    private DatasetDefinition decode(String sut, String name, String raw) throws java.io.IOException {
+        DatasetDefinition result = formats.validate(mapper.readValue(raw, DatasetDefinition.class));
+        if (!result.sutId().equals(sut) || !result.name().equals(name)) throw new ApiFailure(502, "Dataset metadata does not match its Redis namespace.");
+        return result;
+    }
+    public DatasetDefinition update(String sut, String name, DatasetUpdate update) {
+        if (update == null) throw new ApiFailure(400, "DataSet edit is required.");
+        formats.validateUpdate(update.expected(), update.definition());
+        if (!sut.equals(update.definition().sutId()) || !name.equals(update.definition().name())) throw new ApiFailure(400, "DataSet edit must match the selected SUT and DataSet.");
+        try {
+            String key = prefix(sut, name) + ":meta:format";
+            var commands = connection().sync();
+            String raw = commands.get(key);
+            if (raw == null) throw new ApiFailure(404, "Dataset format not found.");
+            if (!decode(sut, name, raw).equals(update.expected())) throw new ApiFailure(409, "DataSet changed. Reload before editing again.");
+            Long saved = commands.eval("if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL') return 1",
+                ScriptOutputType.INTEGER, new String[] { key }, raw, mapper.writeValueAsString(update.definition()));
+            if (saved == null || saved != 1L) throw new ApiFailure(409, "DataSet changed. Reload before editing again.");
+            return update.definition();
+        } catch (ApiFailure failure) { throw failure; }
+        catch (Exception failure) { throw new ApiFailure(503, "DataSet edit failed or its result is unknown. Refresh before retrying."); }
     }
     public DatasetDefinition create(DatasetDefinition definition) {
         formats.validate(definition);

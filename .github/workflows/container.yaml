@@ -1,0 +1,112 @@
+name: Container
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-publish
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["16385:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POCKETDATA_TEST_REDIS_URL: redis://127.0.0.1:16385/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Verify shared artifact checksums
+        working-directory: vendor/maven
+        run: sha256sum -c SHA256SUMS
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+      - name: Test and package Java and React
+        run: mvn -B -ntp clean verify
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix /tmp/pd-browser --no-save --package-lock=false playwright@1.61.1
+          /tmp/pd-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify workspace, CSV, MCP and pacing in browser
+        env:
+          PD_TEST_PLAYWRIGHT: /tmp/pd-browser/node_modules/playwright
+        run: node tests/workspace.browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: validation-evidence
+          path: |
+            target/surefire-reports/
+            /tmp/pd-workspace-ui-*/
+          retention-days: 7
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select image tags
+        id: image
+        env:
+          IMAGE: ghcr.io/sepa79/pocketdata
+        run: |
+          tags=("${IMAGE}:latest" "${IMAGE}:sha-${GITHUB_SHA}")
+          version="$(cat VERSION)"
+          [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$ ]] || exit 1
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+            [[ "${GITHUB_REF_NAME}" == "v${version}" ]] || exit 1
+            tags+=("${IMAGE}:${GITHUB_REF_NAME}")
+          fi
+          printf 'tags<<EOF\n%s\nEOF\n' "$(printf '%s\n' "${tags[@]}")" >> "$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.image.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=PocketData
+            org.opencontainers.image.source=https://github.com/sepa79/PocketData
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.image.outputs.version }}
+            org.opencontainers.image.licenses=GPL-3.0-or-later

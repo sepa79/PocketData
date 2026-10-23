@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ProductApi } from '../api/productApi'
 import type { CatalogSnapshot, DatasetSummary } from '../api/types'
 import type { ConnectionState } from './ConnectionState'
 
-export function useWorkspace(api: ProductApi) {
+export function useWorkspace(api: ProductApi, sut: string) {
   const [catalog, setCatalog] = useState<CatalogSnapshot>({ revision: 0, suts: [] })
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
-  const [sut, setSut] = useState('')
   const [datasetResult, setDatasetResult] = useState<{ sut: string; items: DatasetSummary[]; loading: boolean; error: string }>({ sut: '', items: [], loading: false, error: '' })
   const datasets = datasetResult.sut === sut ? datasetResult.items : []
   const datasetLoading = Boolean(sut) && (datasetResult.sut !== sut || datasetResult.loading)
@@ -15,8 +14,6 @@ export function useWorkspace(api: ProductApi) {
   const [reload, setReload] = useState(0)
   const [version, setVersion] = useState('')
   const [connections, setConnections] = useState<ConnectionState>({ kind: 'loading' })
-  const requestedSut = useRef(sut)
-  requestedSut.current = sut
   const refresh = useCallback(() => setReload(value => value + 1), [])
 
   useEffect(() => {
@@ -27,7 +24,6 @@ export function useWorkspace(api: ProductApi) {
     api.catalog(abort.signal).then(result => {
       if (abort.signal.aborted) return
       setCatalog(result)
-      if (!result.suts.some(item => item.id === requestedSut.current)) setSut('')
     }).catch(error => { if (!abort.signal.aborted) setCatalogError(error.message) })
       .finally(() => { if (!abort.signal.aborted) setCatalogLoading(false) })
     api.connections(abort.signal).then(result => {
@@ -52,5 +48,6 @@ export function useWorkspace(api: ProductApi) {
     return () => abort.abort()
   }, [api, sut, reload])
 
-  return { catalog, catalogLoading, catalogError, sut, setSut, datasets, datasetLoading, datasetError, version, connections, refresh }
+  const selectionError = sut && !catalogLoading && !catalogError && !catalog.suts.some(item => item.id === sut) ? 'Selected SUT no longer exists. Select another environment.' : ''
+  return { catalog, catalogLoading, catalogError: catalogError || selectionError, sut, datasets, datasetLoading, datasetError, version, connections, refresh }
 }

@@ -1,6 +1,7 @@
 {
   "name": "Synthetic SOAP card creation — adapt before running",
   "count": 1,
+  "pacing": { "mode": "DELAY", "value": 0, "unit": "MILLISECONDS" },
   "values": {
     "customerId": "000example",
     "accountNumber": "000example-account"

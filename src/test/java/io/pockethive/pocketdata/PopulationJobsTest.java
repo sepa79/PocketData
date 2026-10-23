@@ -41,7 +41,7 @@ class PopulationJobsTest {
         redis = mock(RedisDatasets.class); when(redis.require("qa", "cards")).thenReturn(format);
         RecordFormat formats = new RecordFormat(); inventory = new CsvInventory(catalog, redis, formats, mapper);
         PopulationTemplates templates = new PopulationTemplates(); PopulationResponses responses = new PopulationResponses();
-        http = new PopulationHttp(); jobs = new PopulationJobs(catalog, redis, inventory, formats, new PopulationValidator(mapper, templates), templates, http, responses);
+        http = new PopulationHttp(); jobs = new PopulationJobs(new PopulationPreparation(catalog, redis, new PopulationValidator(mapper, templates)), redis, inventory, formats, templates, http, responses);
     }
     @AfterEach void close() throws Exception { server.stop(0); jobs.close(); http.close(); }
 
@@ -152,6 +152,64 @@ class PopulationJobsTest {
         inventory.download("qa", "cards", id, response); assertTrue(response.getContentAsString().contains("000a,000c"));
     }
 
+    @Test void delayBeginsAfterPublicationAndNeverWaitsAfterTheLastRecord() throws Exception {
+        var starts = new java.util.concurrent.CopyOnWriteArrayList<Long>();
+        var publications = new java.util.concurrent.CopyOnWriteArrayList<Long>();
+        JsonNode source = singleStepRecipe(2, "DELAY", 150, "MILLISECONDS");
+        server.createContext("/accounts", exchange -> {
+            starts.add(System.nanoTime());
+            byte[] body = "{\"accountNumber\":\"000qa\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(201, body.length); exchange.getResponseBody().write(body); exchange.close();
+        });
+        doAnswer(invocation -> { publications.add(System.nanoTime()); return null; }).when(redis).publish(any(), anyString(), anyMap());
+        PopulationSnapshot done = await(jobs.start("qa", "cards", "ready", source).id());
+        assertEquals(PopulationStatus.SUCCEEDED, done.status());
+        assertEquals(2, starts.size());
+        assertTrue(starts.get(1) - publications.getFirst() >= TimeUnit.MILLISECONDS.toNanos(150));
+        assertFalse(done.waiting());
+        assertTrue(done.achievedPerSecond() > 0);
+        source = singleStepRecipe(1, "DELAY", 365, "DAYS");
+        assertEquals(PopulationStatus.SUCCEEDED, await(jobs.start("qa", "cards", "ready", source).id()).status());
+    }
+
+    @Test void attemptedHourlyRateCanBeStoppedDuringItsLongWaitWithoutAnotherRequest() throws Exception {
+        server.createContext("/accounts", exchange -> {
+            calls.incrementAndGet();
+            byte[] body = "{\"accountNumber\":\"000qa\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(201, body.length); exchange.getResponseBody().write(body); exchange.close();
+        });
+        PopulationSnapshot started = jobs.start("qa", "cards", "ready", singleStepRecipe(2, "RATE", 3, "HOURS"));
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!jobs.read("qa", "cards", started.id()).waiting() && System.nanoTime() < deadline) Thread.sleep(10);
+        var waiting = jobs.read("qa", "cards", started.id());
+        assertTrue(waiting.waiting()); assertEquals(1, waiting.published());
+        assertTrue(waiting.waitRemainingMs() > TimeUnit.MINUTES.toMillis(19));
+        jobs.stop("qa", "cards", started.id());
+        var stopped = await(started.id());
+        assertEquals(PopulationStatus.STOPPED, stopped.status()); assertEquals(1, calls.get());
+        assertFalse(stopped.waiting());
+        assertTrue(stopped.elapsedMs() < TimeUnit.SECONDS.toMillis(10));
+        verify(redis, times(1)).publish(any(), anyString(), anyMap());
+    }
+
+    @Test void pacingIsRequiredAndValidatedBeforeCreatingAnyInventory() throws Exception {
+        var source = (com.fasterxml.jackson.databind.node.ObjectNode) recipe(1, "SOAP11");
+        source.remove("pacing");
+        assertEquals(400, assertThrows(ApiFailure.class, () -> jobs.start("qa", "cards", "ready", source)).status());
+        source.set("pacing", mapper.valueToTree(Map.of("mode", "RATE", "value", 0, "unit", "SECONDS")));
+        assertEquals(400, assertThrows(ApiFailure.class, () -> jobs.start("qa", "cards", "ready", source)).status());
+        assertTrue(inventory.list("qa", "cards").isEmpty());
+        assertEquals(0, calls.get()); verify(redis, never()).publish(any(), anyString(), anyMap());
+    }
+
+    private JsonNode singleStepRecipe(int count, String mode, double value, String unit) {
+        var source = (com.fasterxml.jackson.databind.node.ObjectNode) recipe(count, "SOAP11");
+        ((com.fasterxml.jackson.databind.node.ArrayNode) source.get("steps")).remove(1);
+        ((com.fasterxml.jackson.databind.node.ObjectNode) source.get("values")).put("cardNumber", "000card");
+        source.set("pacing", mapper.valueToTree(Map.of("mode", mode, "value", value, "unit", unit)));
+        return source;
+    }
+
     private PopulationSnapshot await(String id) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         while (System.nanoTime() < deadline) {
@@ -163,7 +221,7 @@ class PopulationJobsTest {
     }
     private JsonNode recipe(int count, String kind) {
         String envelope = kind.equals("SOAP12") ? "http://www.w3.org/2003/05/soap-envelope" : "http://schemas.xmlsoap.org/soap/envelope/";
-        return mapper.valueToTree(Map.of("name", "Synthetic account/card", "count", count, "values", Map.of("extraField", "kept"), "params", Map.of(), "steps", List.of(
+        return mapper.valueToTree(Map.of("name", "Synthetic account/card", "count", count, "pacing", Map.of("mode", "DELAY", "value", 0, "unit", "MILLISECONDS"), "values", Map.of("extraField", "kept"), "params", Map.of(), "steps", List.of(
             step("account", "JSON", Map.of("serviceId", "qa", "callId", "account", "protocol", "HTTP", "method", "POST", "pathTemplate", "/accounts", "headersTemplate", Map.of("Content-Type", "application/json"), "bodyTemplate", "{\"iteration\":{{ params.iteration }}}"), Map.of("accountNumber", "/accountNumber"), Map.of()),
             step("card", kind, Map.of("serviceId", "qa", "callId", "card", "protocol", "HTTP", "method", "POST", "pathTemplate", "/cards", "headersTemplate", Map.of(), "bodyTemplate", "<s:Envelope xmlns:s=\"" + envelope + "\"><s:Body><c:CreateCard xmlns:c=\"urn:cards\"><c:accountNumber>{{ xml_text(record.accountNumber) }}</c:accountNumber></c:CreateCard></s:Body></s:Envelope>"), Map.of("cardNumber", "/soap:Envelope/soap:Body/c:CreateCardResponse/c:cardNumber"), Map.of("c", "urn:cards")) )));
     }

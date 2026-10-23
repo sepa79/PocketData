@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { PopulationApi } from '../api/populationApi'
 import type { PopulationController } from '../hooks/usePopulation'
+import { describePacing, formatAchievedRate, formatDuration } from './populationPacing'
 
 export function PopulationRunStatus({ api, controller }: {
   api: PopulationApi; controller: PopulationController
@@ -36,12 +37,17 @@ export function PopulationRunStatus({ api, controller }: {
   if (!run) return null
   const { job, target } = run
   return <section className="pd-card" aria-label="Population job">
-    <div className="pd-card-heading"><h2>{job.status}</h2><code>{job.id}</code></div>
+    <div className="pd-card-heading pd-population-run-heading"><h2>{job.status}</h2><code>{job.id}</code></div>
     <p className="pd-muted">{target.sut} / {target.dataset} / {target.list}{pollError ? ' · Last confirmed status' : ''}</p>
     <dl className="pd-population-counters">
       <div><dt>Requested</dt><dd>{job.total}</dd></div><div><dt>Completed</dt><dd>{job.completed}</dd></div>
       <div><dt>Published</dt><dd>{job.published}</dd></div><div><dt>Iteration</dt><dd>{job.iteration}</dd></div>
+      <div><dt>Achieved rate</dt><dd>{formatAchievedRate(job.achievedPerSecond)}</dd></div>
+      <div><dt>Elapsed</dt><dd title={`${job.elapsedMs} ms`}>{formatDuration(job.elapsedMs)}</dd></div>
     </dl>
+    <p className="pd-muted">{describePacing(job.pacing, true)}</p>
+    <p className="pd-muted">Achieved rate counts published full iterations over elapsed time.</p>
+    {job.waiting ? <p role="status">Waiting between iterations · <span title={`${job.waitRemainingMs} ms`}>{formatDuration(job.waitRemainingMs)}</span> remaining (last reported)</p> : null}
     {job.step ? <p className="pd-muted">Step: {job.step}</p> : null}
     {job.inventoryId ? <p>Saved inventory: <code>{job.inventoryId}</code></p> : null}
     {job.error ? <p className="pd-error" role="alert">{job.error} No automatic retry or resume. Inspect inventory and Redis before running again.</p> : null}

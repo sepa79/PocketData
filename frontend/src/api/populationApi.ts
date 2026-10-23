@@ -10,6 +10,10 @@ export function createPopulationApi(fetchWithAuth: AuthenticatedFetch) {
     return response.json() as Promise<PopulationJob>
   }
   return {
+    draft: async (target: PopulationTarget) => {
+      const response = await requireSuccess(await fetchWithAuth(`/api/suts/${encodeURIComponent(target.sut)}/datasets/${encodeURIComponent(target.dataset)}/population-draft`, { cache: 'no-store' }))
+      return response.json() as Promise<{ revision: number; list: string; recipe: PopulationRecipe | null }>
+    },
     start: (target: PopulationTarget, recipe: PopulationRecipe) => json(`${base(target)}?list=${encodeURIComponent(target.list)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(recipe),
     }),

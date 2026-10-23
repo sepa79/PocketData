@@ -61,7 +61,7 @@ function recipe(count = 2, fault = false) {
       bodyTemplate: kind === 'JSON' ? '{"customer":{{ json_string(record.customer) }},"iteration":{{ params.iteration }}}' : '<s:Envelope xmlns:s="' + (kind === 'SOAP12' ? 'http://www.w3.org/2003/05/soap-envelope' : 'http://schemas.xmlsoap.org/soap/envelope/') + '"><s:Body><c:CreateCard xmlns:c="urn:cards"><c:accountNumber>{{ xml_text(record.accountNumber) }}</c:accountNumber></c:CreateCard></s:Body></s:Envelope>'},
     response: {kind, soapAction: kind === 'JSON' ? '' : 'urn:create-card', expectedStatus: kind === 'JSON' ? 201 : 200,
       extract: {[field]: kind === 'JSON' ? '/accountNumber' : '/soap:Envelope/soap:Body/c:CreateCardResponse/c:cardNumber'}, namespaces: kind === 'JSON' ? {} : {c: 'urn:cards'}}}});
-  return {name: 'Synthetic JSON and SOAP creation', count, values: {customer: '000customer', extraField: 'retained-extra'}, params: {customer: 'independent-param'}, steps: [
+  return {name: 'Synthetic JSON and SOAP creation', count, pacing: {mode: 'DELAY', value: 0, unit: 'MILLISECONDS'}, values: {customer: '000customer', extraField: 'retained-extra'}, params: {customer: 'independent-param'}, steps: [
     step('account', '/accounts', 'JSON', 'accountNumber'), step('card11', fault ? '/fault' : '/cards11', 'SOAP11', 'cardNumber11'),
     step('card12', '/cards12', 'SOAP12', 'cardNumber12')]};
 }
@@ -97,6 +97,7 @@ function recipe(count = 2, fault = false) {
     await page.reload(); await page.locator('#sut-select').selectOption(identity);
     await page.getByRole('combobox', {name: /^DataSet/}).selectOption('cards');
     async function start(source) {
+      if (!await page.locator('textarea.pd-population-script').isVisible()) await page.getByText('Advanced / Script', {exact: true}).click();
       await page.locator('textarea.pd-population-script').fill(JSON.stringify(source, null, 2));
       await page.getByRole('button', {name: 'Run script…', exact: true}).click();
       const response = page.waitForResponse(value => value.url().includes(base + '/population?') && value.request().method() === 'POST');

@@ -7,6 +7,7 @@ import { usePopulation } from './usePopulation'
 
 function apiFixture() {
   return {
+    draft: vi.fn(async () => ({ revision: 0, list: '', recipe: null })),
     start: vi.fn(async () => populationJob), status: vi.fn(async () => populationJob),
     stop: vi.fn(async (): Promise<PopulationJob> => ({ ...populationJob, status: 'STOPPED' })), responses: vi.fn(async () => new Blob()),
   } satisfies PopulationApi
